@@ -98,6 +98,18 @@
     .sua-link { margin-top: 8px; font-size: 13.5px; }
     .sua-link a { color: var(--primary); font-weight: 600; }
     .sua { margin-top: 10px; background: #f7f5ef; border: 1px dashed var(--border); border-radius: 10px; padding: 10px 11px; }
+    /* ===== Màn Hôm nay ===== */
+    .hnSec { margin-top: 14px; font-weight: 700; font-size: 14.5px; }
+    .hnSec.xanh { color: var(--ok); }
+    .hnSec.do { color: var(--err); }
+    .hnSec.xam { color: var(--muted); }
+    .hnrow {
+      display: flex; gap: 8px; align-items: baseline; font-size: 14px;
+      padding: 8px 0; border-bottom: 1px dashed var(--border);
+    }
+    .hnrow .ten { font-weight: 600; flex: 1; }
+    .hnrow .ca2 { color: var(--muted); font-size: 12.5px; }
+    .hnrow .gio2 { text-align: right; white-space: nowrap; }
     .chips { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
     .chip {
       border: 1px solid var(--primary); background: #fff; color: var(--primary); border-radius: 999px;
@@ -172,7 +184,8 @@
 
     <!-- ===== TAB CHUYỂN MÀN (hiện sau khi mở khóa) ===== -->
     <div id="tabs" class="tabbar">
-      <button type="button" class="tab on" id="tabTicket" onclick="moTab('ticket')">Duyệt ticket</button>
+      <button type="button" class="tab on" id="tabTicket" onclick="moTab('ticket')">Duyệt</button>
+      <button type="button" class="tab" id="tabHomNay" onclick="moTab('homnay')">Hôm nay</button>
       <button type="button" class="tab" id="tabLuong" onclick="moTab('luong')">Tính lương</button>
     </div>
 
@@ -186,6 +199,17 @@
       <div id="boardBox" class="box"></div>
       <div id="list"></div>
       <div id="empty" class="empty" style="display:none">✓ Không có ticket nào chờ duyệt.</div>
+    </div>
+
+    <!-- ===== MÀN HÔM NAY (chỉ xem): ai đang trong ca / quên check-out / đã xong ca ===== -->
+    <div id="homnay" class="card" style="display:none">
+      <div class="topbar">
+        <h3>Hôm nay</h3>
+        <span class="count" id="hnNgay"></span>
+        <button type="button" class="btn btn-ghost btn-sm" style="width:auto;padding:0 14px" onclick="taiHomNay()">Tải lại</button>
+      </div>
+      <div id="hnBox" class="box"></div>
+      <div id="hnKQ"></div>
     </div>
 
     <!-- ===== MÀN TÍNH LƯƠNG (chỉ xem — bảng lương chính thức vẫn tạo bằng menu trong Sheet) ===== -->
@@ -208,6 +232,9 @@
       </div>
       <div id="luongBox" class="box"></div>
       <div id="luongKQ"></div>
+      <div class="field" id="khuCSV" style="display:none">
+        <button type="button" class="btn btn-ghost" onclick="xuatCSV()">⬇ Xuất file CSV (mở được bằng Excel)</button>
+      </div>
       <div class="hint">Chỉ để xem nhanh. Bảng lương chính thức (lưu hồ sơ) vẫn tạo bằng menu ⏱ Chấm công → Tính lương tháng... trong Sheet.</div>
     </div>
   </div>
@@ -411,13 +438,67 @@
 
     // ===== TAB TÍNH LƯƠNG (chỉ xem — server verify mã mỗi call, không ghi gì vào Sheet) =====
     var luongBusy = false;
+    var luongData = null;   // kết quả tính gần nhất — nguồn cho nút Xuất CSV
 
     function moTab(t) {
       $('board').style.display = (t === 'ticket') ? 'block' : 'none';
+      $('homnay').style.display = (t === 'homnay') ? 'block' : 'none';
       $('luong').style.display = (t === 'luong') ? 'block' : 'none';
       $('tabTicket').className = 'tab' + (t === 'ticket' ? ' on' : '');
+      $('tabHomNay').className = 'tab' + (t === 'homnay' ? ' on' : '');
       $('tabLuong').className = 'tab' + (t === 'luong' ? ' on' : '');
       if (t === 'luong' && !$('tuNgay').value) chonKy(0); // lần đầu mở: tự chọn kỳ này + tính luôn
+      if (t === 'homnay') taiHomNay();                    // mỗi lần mở tab là lấy số liệu tươi
+    }
+
+    // ===== TAB HÔM NAY (chỉ xem) =====
+    var hnBusy = false;
+
+    function taiHomNay() {
+      if (!mk || hnBusy) return;
+      hnBusy = true;
+      hideBox($('hnBox'));
+      $('hnKQ').innerHTML = '<div class="empty">Đang tải...</div>';
+      goiApi({ api: 'homnay', mk: mk }, function (res) {
+        hnBusy = false;
+        if (!res || !res.ok) {
+          $('hnKQ').innerHTML = '';
+          showBox($('hnBox'), 'err', (res && res.message) ? res.message : 'Không tải được, thử lại.');
+          return;
+        }
+        renderHomNay(res);
+      }, function (msg) {
+        hnBusy = false;
+        $('hnKQ').innerHTML = '';
+        showBox($('hnBox'), 'err', msg);
+      });
+    }
+
+    function hnRow(x, gio) {
+      return '<div class="hnrow"><span class="ten">' + esc(x.ten) + '</span>' +
+             '<span class="ca2">' + esc(x.ca || '—') + '</span>' +
+             '<span class="gio2">' + gio + '</span></div>';
+    }
+
+    function renderHomNay(res) {
+      $('hnNgay').textContent = res.ngay || '';
+      var dang = res.dangLam || [], quen = res.quenCheckout || [], xong = res.xongCa || [], bat = res.batThuong || [];
+      var html = '';
+      html += '<div class="hnSec xanh">🟢 Đang trong ca (' + dang.length + ')</div>';
+      html += dang.length ? dang.map(function (x) { return hnRow(x, 'vào ' + esc(x.gioVao)); }).join('')
+                          : '<div class="empty" style="padding:10px">Không có ai đang trong ca.</div>';
+      if (quen.length) {
+        html += '<div class="hnSec do">🔴 Quên check-out (' + quen.length + ')</div>' +
+                quen.map(function (x) { return hnRow(x, 'vào ' + esc(x.gioVao) + ' · chưa ra'); }).join('');
+      }
+      html += '<div class="hnSec xam">✅ Đã xong ca (' + xong.length + ')</div>';
+      html += xong.length ? xong.map(function (x) { return hnRow(x, esc(x.gioVao) + ' → ' + esc(x.gioRa) + ' · ' + esc(x.soGio) + 'h'); }).join('')
+                          : '<div class="empty" style="padding:10px">Chưa ai xong ca hôm nay.</div>';
+      if (bat.length) {
+        html += '<div class="hnSec do">⚠ Bất thường — chỉ có Check-out (' + bat.length + ')</div>' +
+                bat.map(function (x) { return hnRow(x, 'ra ' + esc(x.gioRa)); }).join('');
+      }
+      $('hnKQ').innerHTML = html;
     }
 
     // Kỳ lương theo NGAY_CHOT (d): từ ngày d+1 tháng trước đến hết ngày d tháng chốt.
@@ -452,8 +533,11 @@
         if (!res || !res.ok) {
           showBox($('luongBox'), 'err', (res && res.message) ? res.message : 'Không tính được, thử lại.');
           $('luongKQ').innerHTML = ''; $('luongKhoang').textContent = '';
+          luongData = null; $('khuCSV').style.display = 'none';
           return;
         }
+        luongData = res;
+        $('khuCSV').style.display = (res.tongHop && res.tongHop.length) ? 'block' : 'none';
         renderLuong(res);
       }, function (msg) {
         luongBusy = false; $('btnTinh').disabled = false; $('btnTinh').textContent = 'Tính lương';
@@ -490,6 +574,42 @@
           '</summary>' + rows + '</details>';
       });
       $('luongKQ').innerHTML = html;
+    }
+
+    // ===== XUẤT CSV từ kết quả tính lương gần nhất (sinh ngay trên máy, không gọi server) =====
+    function csvCell(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+
+    function xuatCSV() {
+      if (!luongData) return;
+      var r = luongData, lines = [];
+      lines.push(csvCell('BẢNG LƯƠNG ' + r.tuNgay + ' - ' + r.denNgay + ' — DOME saigon (xuất từ app Duyệt DOME, chỉ để tham khảo)'));
+      lines.push('');
+      lines.push(['Tên', 'Vị trí', 'Đơn giá/giờ', 'Tổng giờ', 'Thành tiền'].map(csvCell).join(','));
+      (r.tongHop || []).forEach(function (p) {
+        lines.push([p.ten, p.viTri, p.donGia, p.tongGio, p.thanhTien].map(csvCell).join(','));
+      });
+      lines.push(['TỔNG CỘNG', '', '', r.tongGio, r.tongTien].map(csvCell).join(','));
+      lines.push('');
+      lines.push(['Tên', 'Ngày', 'Ca', 'Giờ vào', 'Giờ ra', 'Số giờ', 'Ghi chú'].map(csvCell).join(','));
+      (r.chiTiet || []).forEach(function (c) {
+        lines.push([c.ten, c.ngay, c.ca, c.gioVao, c.gioRa, c.soGio, c.ghiChu].map(csvCell).join(','));
+      });
+      var csv = '\uFEFF' + lines.join('\r\n'); // BOM để Excel nhận UTF-8 tiếng Việt
+      var tenFile = 'luong-DOME-' + String(r.tuNgay).replace(/\//g, '.') + '_' + String(r.denNgay).replace(/\//g, '.') + '.csv';
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      // Ưu tiên share sheet (iPhone: gửi thẳng Zalo/Lưu vào Tệp); không có thì tải file thường
+      var file = null;
+      try { file = new File([blob], tenFile, { type: 'text/csv' }); } catch (e) {}
+      if (file && navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+        navigator.share({ files: [file], title: tenFile })['catch'](function () { /* người dùng bấm Hủy — bỏ qua */ });
+        return;
+      }
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = tenFile;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); if (a.parentNode) a.parentNode.removeChild(a); }, 4000);
     }
 
     // ===== Vỏ app: service worker + ẩn màn hình chờ khi UI đã sẵn sàng =====
