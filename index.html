@@ -14,8 +14,12 @@
   <meta name="apple-mobile-web-app-title" content="Duyệt DOME">
   <style>
     html, body { margin: 0; padding: 0; height: 100%; background: #4A6741; }
+    /* Chừa vùng an toàn tai thỏ/Dynamic Island (máy không có thì = 0) — nội dung không chui dưới đồng hồ */
+    body { padding-top: env(safe-area-inset-top); }
     iframe {
-      border: 0; width: 100%; height: 100vh; height: 100dvh; display: block;
+      border: 0; width: 100%; display: block;
+      height: 100vh;
+      height: calc(100dvh - env(safe-area-inset-top));
     }
     .fallback {
       display: none; color: #F2D3BE; text-align: center; padding: 48px 24px;
