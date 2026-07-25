@@ -45,7 +45,7 @@
     .hero-saigon { font-family: 'Dancing Script', cursive; font-size: 26px; margin-top: -4px; }
     .hero-sub { font-size: 13px; margin-top: 6px; opacity: .9; letter-spacing: .5px; }
     label.lbl { display: block; font-weight: 600; font-size: 14.5px; margin-bottom: 7px; }
-    input[type=password], input[type=text] {
+    input[type=password], input[type=text], input[type=number] {
       width: 100%; min-height: 48px; border: 1px solid var(--border); border-radius: var(--radius);
       padding: 12px 13px; font-size: 16px; font-family: inherit; background: #fff; color: inherit;
     }
@@ -78,10 +78,13 @@
     .box.err { background: var(--err-bg); color: var(--err); border: 1px solid #f5c6c0; }
     .empty { text-align: center; color: var(--muted); padding: 26px 10px; font-size: 15px; }
     .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
-    /* ===== Tab Duyệt / Tính lương ===== */
-    .tabbar { display: none; gap: 8px; margin-bottom: 12px; }
+    /* ===== Tab Duyệt / Hôm nay / Tính lương / Nhân viên ===== */
+    .tabbar { display: none; gap: 6px; margin-bottom: 12px; }
     .tab {
-      flex: 1; min-height: 44px; border-radius: var(--radius); font-family: inherit; font-size: 15px;
+      flex: 1; min-width: 0; min-height: 44px; padding: 0 3px; white-space: nowrap;
+      border-radius: var(--radius); font-family: inherit;
+      /* 4 tab vẫn đủ chỗ trên iPhone SE 375px (~11.8px), máy rộng thì về 15px như cũ */
+      font-size: clamp(11.5px, 3.15vw, 15px);
       font-weight: 700; cursor: pointer; background: #fff; color: var(--primary); border: 1px solid var(--primary);
     }
     .tab.on { background: var(--primary); color: #fff; }
@@ -138,6 +141,35 @@
     .ctrow.loi { color: var(--err); }
     .ctghi { font-size: 12.5px; color: var(--warn); padding: 0 0 7px; }
     .ctghi.nhe { color: var(--muted); }
+    /* ===== Màn Nhân viên (v10.0) ===== */
+    .nvx-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 0 13px; margin-bottom: 10px; }
+    .nvx-card.off { opacity: .55; }
+    .nvx-head { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 12px 0; cursor: pointer; }
+    .nvx-ten { font-weight: 700; font-size: 15.5px; }
+    .nvx-sub { font-size: 12.5px; color: var(--muted); }
+    .nvx-badge { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+    .nvx-badge.lam { background: var(--ok-bg); color: var(--ok); border: 1px solid #c9d8c2; }
+    .nvx-badge.nghi { background: #eef0f3; color: var(--muted); border: 1px solid var(--border); }
+    .nvx-act { border-top: 1px dashed var(--border); padding: 12px 0 14px; }
+    .nvx-act .btn { margin-top: 10px; }
+    .nvx-lbl { display: block; font-weight: 600; font-size: 13.5px; margin-bottom: 6px; }
+    /* KHÔNG dùng appearance:none cho select — iOS mất mũi tên dropdown */
+    select.nvx-sel {
+      width: 100%; min-height: 48px; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 10px 12px; font-size: 16px; font-family: inherit; background: #fff; color: inherit;
+    }
+    /* Hàng nút riêng — KHÔNG dùng class .acts (lockActs của tab Duyệt quét .acts .btn) */
+    .nvx-row { display: flex; gap: 8px; margin-top: 12px; }
+    .nvx-row .btn { flex: 1; margin-top: 0; }
+    .nvx-pin { background: var(--ok-bg); border: 1px solid #c9d8c2; border-radius: var(--radius); padding: 14px 13px; margin-bottom: 12px; text-align: center; }
+    .nvx-pin-lbl { font-size: 14px; color: var(--ok); }
+    .nvx-pin-so { font-size: 40px; font-weight: 800; letter-spacing: 8px; color: var(--primary-dark); line-height: 1.3; }
+    .nvx-pin-note { font-size: 13px; color: var(--ok); margin-bottom: 10px; }
+    .nvx-vt { display: flex; gap: 10px; align-items: baseline; font-size: 14px; padding: 9px 0; border-bottom: 1px dashed var(--border); }
+    .nvx-vt .ten2 { font-weight: 600; flex: 1; }
+    .nvx-vt .gia { white-space: nowrap; }
+    .nvx-vt a { color: var(--primary); font-weight: 600; font-size: 13.5px; }
+    .nvx-sec { margin-top: 22px; font-size: 17px; font-weight: 700; color: var(--primary); }
     /* ===== Màn hình chờ — che nhịp render đầu, ẩn ngay khi UI sẵn sàng ===== */
     .splash {
       position: fixed; inset: 0; background: var(--primary); z-index: 10;
@@ -187,6 +219,7 @@
       <button type="button" class="tab on" id="tabTicket" onclick="moTab('ticket')">Duyệt</button>
       <button type="button" class="tab" id="tabHomNay" onclick="moTab('homnay')">Hôm nay</button>
       <button type="button" class="tab" id="tabLuong" onclick="moTab('luong')">Tính lương</button>
+      <button type="button" class="tab" id="tabNhanVien" onclick="moTab('nhanvien')">👥 Nhân viên</button>
     </div>
 
     <!-- ===== MÀN DANH SÁCH ===== -->
@@ -236,6 +269,51 @@
         <button type="button" class="btn btn-ghost" onclick="xuatCSV()">⬇ Xuất file CSV (mở được bằng Excel)</button>
       </div>
       <div class="hint">Chỉ để xem nhanh. Bảng lương chính thức (lưu hồ sơ) vẫn tạo bằng menu ⏱ Chấm công → Tính lương tháng... trong Sheet.</div>
+    </div>
+
+    <!-- ===== MÀN NHÂN VIÊN (v10.0): thêm/đổi vị trí/reset PIN/cho nghỉ + vị trí & đơn giá ===== -->
+    <div id="nhanvien" class="card" style="display:none">
+      <div class="topbar">
+        <h3>Nhân viên</h3>
+        <span class="count" id="nvCount"></span>
+        <button type="button" class="btn btn-ghost btn-sm" style="width:auto;padding:0 14px" onclick="taiNhanVien()">Tải lại</button>
+      </div>
+      <div id="nvBox" class="box"></div>
+      <div id="nvPinKQ"></div>
+      <div class="field">
+        <button type="button" class="btn btn-ghost" onclick="nvMoThem()">＋ Thêm nhân viên</button>
+      </div>
+      <div class="sua" id="nvFormThem" style="display:none">
+        <label class="nvx-lbl" for="nvThemTen">Tên nhân viên</label>
+        <input type="text" id="nvThemTen" autocomplete="off" placeholder="VD: Nguyễn Văn A">
+        <label class="nvx-lbl" for="nvThemPin" style="margin-top:12px">PIN 4 số <span style="font-weight:400;color:var(--muted)">— để trống thì máy tự sinh</span></label>
+        <input type="text" id="nvThemPin" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="VD: 1234">
+        <label class="nvx-lbl" for="nvThemViTri" style="margin-top:12px">Vị trí</label>
+        <div id="nvThemVT"></div>
+        <div class="nvx-row">
+          <button type="button" class="btn btn-primary btn-sm" onclick="nvThem(this)">Thêm nhân viên</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="nvMoThem()">Đóng</button>
+        </div>
+      </div>
+      <div id="nvKQ"></div>
+
+      <div class="nvx-sec">Vị trí &amp; đơn giá</div>
+      <div class="hint" style="margin-top:2px">Đơn giá gắn theo vị trí — đổi là áp cho mọi nhân viên ở vị trí đó.</div>
+      <div id="vtBox" class="box"></div>
+      <div id="vtKQ"></div>
+      <div class="field">
+        <button type="button" class="btn btn-ghost" onclick="vtMoThem()">＋ Thêm vị trí</button>
+      </div>
+      <div class="sua" id="vtFormThem" style="display:none">
+        <label class="nvx-lbl" for="vtThemTen">Tên vị trí</label>
+        <input type="text" id="vtThemTen" autocomplete="off" placeholder="VD: Pha chế">
+        <label class="nvx-lbl" for="vtThemGia" style="margin-top:12px">Đơn giá (đ/giờ)</label>
+        <input type="number" id="vtThemGia" inputmode="numeric" placeholder="VD: 30000">
+        <div class="nvx-row">
+          <button type="button" class="btn btn-primary btn-sm" onclick="vtThem(this)">Thêm vị trí</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="vtMoThem()">Đóng</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -444,11 +522,14 @@
       $('board').style.display = (t === 'ticket') ? 'block' : 'none';
       $('homnay').style.display = (t === 'homnay') ? 'block' : 'none';
       $('luong').style.display = (t === 'luong') ? 'block' : 'none';
+      $('nhanvien').style.display = (t === 'nhanvien') ? 'block' : 'none';
       $('tabTicket').className = 'tab' + (t === 'ticket' ? ' on' : '');
       $('tabHomNay').className = 'tab' + (t === 'homnay' ? ' on' : '');
       $('tabLuong').className = 'tab' + (t === 'luong' ? ' on' : '');
+      $('tabNhanVien').className = 'tab' + (t === 'nhanvien' ? ' on' : '');
       if (t === 'luong' && !$('tuNgay').value) chonKy(0); // lần đầu mở: tự chọn kỳ này + tính luôn
       if (t === 'homnay') taiHomNay();                    // mỗi lần mở tab là lấy số liệu tươi
+      if (t === 'nhanvien') taiNhanVien();                // mỗi lần mở tab là lấy danh sách tươi
     }
 
     // ===== TAB HÔM NAY (chỉ xem) =====
@@ -610,6 +691,257 @@
       document.body.appendChild(a);
       a.click();
       setTimeout(function () { URL.revokeObjectURL(a.href); if (a.parentNode) a.parentNode.removeChild(a); }, 4000);
+    }
+
+    // ===== TAB NHÂN VIÊN (v10.0) — thêm/sửa NV + vị trí & đơn giá.
+    // Server verify mã duyệt mỗi call; PIN không bao giờ nằm trong danh sách, chỉ hiện 1 lần khi thêm/reset.
+    var nvBusy = false;
+    var nvData = null;   // {nhanVien:[{ten,viTri,donGia,active}], viTri:[{ten,donGia}]} của lần tải gần nhất
+
+    // giuThongBao = true khi gọi lại sau một thao tác (giữ dòng báo thành công trên màn)
+    function taiNhanVien(giuThongBao) {
+      if (!mk || nvBusy) return;
+      nvBusy = true;
+      if (giuThongBao !== true) { hideBox($('nvBox')); hideBox($('vtBox')); }
+      $('nvKQ').innerHTML = '<div class="empty">Đang tải...</div>';
+      goiApi({ api: 'nvlist', mk: mk }, function (res) {
+        nvBusy = false;
+        if (!res || !res.ok) {
+          $('nvKQ').innerHTML = ''; $('vtKQ').innerHTML = ''; $('nvCount').textContent = '';
+          showBox($('nvBox'), 'err', (res && res.message) ? res.message : 'Không tải được, thử lại.');
+          return;
+        }
+        nvData = res;
+        renderNhanVien(res);
+      }, function (msg) {
+        nvBusy = false;
+        $('nvKQ').innerHTML = '';
+        showBox($('nvBox'), 'err', msg);
+      });
+    }
+
+    // donGia có thể null (chưa đặt) → hiện "—"; server lỡ trả chuỗi thì vẫn hiện được
+    function nvGia(g) {
+      if (g == null || g === '') return '—';
+      var n = Number(g);
+      return (isFinite(n) ? vnd(n) : esc(g)) + ' đ/giờ';
+    }
+
+    // Select vị trí dùng chung (thẻ NV + form thêm NV). Giữ style hệ thống — không appearance:none.
+    function nvSelectVT(id, chon) {
+      var ds = (nvData && nvData.viTri) || [];
+      var co = false, opt = '';
+      ds.forEach(function (v) {
+        var sel = (String(v.ten) === String(chon));
+        if (sel) co = true;
+        opt += '<option value="' + esc(v.ten) + '"' + (sel ? ' selected' : '') + '>' + esc(v.ten) + '</option>';
+      });
+      // NV đang ở vị trí không còn trong bảng đơn giá → vẫn hiện đúng vị trí đang có
+      if (chon && !co) opt = '<option value="' + esc(chon) + '" selected>' + esc(chon) + '</option>' + opt;
+      if (!chon) opt = '<option value="">— Chọn vị trí —</option>' + opt;
+      return '<select class="nvx-sel" id="' + id + '">' + opt + '</select>';
+    }
+
+    function renderNhanVien(res) {
+      var ds = res.nhanVien || [], dsVT = res.viTri || [], dangLam = 0;
+      ds.forEach(function (n) { if (n.active) dangLam++; });
+      $('nvCount').textContent = ds.length ? (dangLam + '/' + ds.length + ' đang làm') : '';
+
+      var html = ds.length ? '' : '<div class="empty">Chưa có nhân viên nào.</div>';
+      ds.forEach(function (n, i) {
+        html += '<div class="nvx-card' + (n.active ? '' : ' off') + '">' +
+          '<div class="nvx-head" onclick="nvMoThe(' + i + ')">' +
+            '<div>' +
+              '<div class="nvx-ten">' + esc(n.ten) + '</div>' +
+              '<div class="nvx-sub">' + esc(n.viTri || '—') + ' · ' + nvGia(n.donGia) + '</div>' +
+            '</div>' +
+            '<span class="nvx-badge ' + (n.active ? 'lam' : 'nghi') + '">' + (n.active ? 'Đang làm' : 'Nghỉ') + '</span>' +
+          '</div>' +
+          '<div class="nvx-act" id="nvxa-' + i + '" style="display:none">' +
+            '<label class="nvx-lbl" for="nvxvt-' + i + '">Đổi vị trí</label>' +
+            nvSelectVT('nvxvt-' + i, n.viTri) +
+            '<button type="button" class="btn btn-primary btn-sm" onclick="nvLuuViTri(' + i + ', this)">Lưu vị trí</button>' +
+            '<button type="button" class="btn btn-ghost btn-sm" onclick="nvResetPin(' + i + ', this)">🔑 Reset PIN</button>' +
+            '<button type="button" class="btn btn-ghost btn-sm" onclick="nvDoiActive(' + i + ', this)">' +
+              (n.active ? 'Cho nghỉ' : 'Cho làm lại') + '</button>' +
+          '</div>' +
+        '</div>';
+      });
+      $('nvKQ').innerHTML = html;
+
+      var h2 = dsVT.length ? '' : '<div class="empty" style="padding:12px">Chưa có vị trí nào.</div>';
+      dsVT.forEach(function (v, i) {
+        h2 += '<div class="nvx-vt">' +
+            '<span class="ten2">' + esc(v.ten) + '</span>' +
+            '<span class="gia">' + nvGia(v.donGia) + '</span>' +
+            '<a href="javascript:void(0)" onclick="vtMoSua(' + i + ')">✎ Sửa</a>' +
+          '</div>' +
+          '<div class="sua" id="vts-' + i + '" style="display:none">' +
+            '<label class="nvx-lbl" for="vtg-' + i + '">Đơn giá mới (đ/giờ)</label>' +
+            '<input type="number" inputmode="numeric" id="vtg-' + i + '" value="' + esc(v.donGia == null ? '' : v.donGia) + '">' +
+            '<div class="bu-warn">⚠ Áp cho MỌI nhân viên vị trí này và cả kỳ đang tính — nên đổi vào đầu kỳ.</div>' +
+            '<div class="nvx-row">' +
+              '<button type="button" class="btn btn-primary btn-sm" onclick="vtLuu(' + i + ', this)">Lưu đơn giá</button>' +
+              '<button type="button" class="btn btn-ghost btn-sm" onclick="vtDongSua(' + i + ')">Đóng</button>' +
+            '</div>' +
+          '</div>';
+      });
+      $('vtKQ').innerHTML = h2;
+    }
+
+    function nvMoThe(i) {
+      var el = $('nvxa-' + i);
+      if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+    }
+
+    function nvItem(i) {
+      var ds = (nvData && nvData.nhanVien) || [];
+      return ds[i] || null;
+    }
+
+    // Gọi 1 mutation: khóa nút → gọi API → báo kết quả vào box → tải lại danh sách.
+    function nvGoi(payload, btn, nhan, box, sau) {
+      if (nvBusy) return;
+      nvBusy = true;
+      var chuCu = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Đang xử lý...'; }
+      hideBox($('nvBox')); hideBox($('vtBox'));
+      goiApi(payload, function (res) {
+        nvBusy = false;
+        if (btn) { btn.disabled = false; btn.textContent = chuCu; }
+        if (!res || !res.ok) {
+          showBox(box, 'err', (res && res.message) ? res.message : 'Không thực hiện được, thử lại.');
+          return;
+        }
+        showBox(box, 'ok', res.message ? res.message : nhan);
+        if (sau) sau(res);
+        taiNhanVien(true);
+      }, function (msg) {
+        nvBusy = false;
+        if (btn) { btn.disabled = false; btn.textContent = chuCu; }
+        showBox(box, 'err', msg);
+      });
+    }
+
+    // PIN chỉ hiện 1 lần — để ở thẻ riêng đầu tab nên tải lại danh sách không xóa mất.
+    function hienPin(ten, pin) {
+      if (!pin) return;
+      $('nvPinKQ').innerHTML =
+        '<div class="nvx-pin">' +
+          '<div class="nvx-pin-lbl">PIN của <b>' + esc(ten) + '</b></div>' +
+          '<div class="nvx-pin-so">' + esc(pin) + '</div>' +
+          '<div class="nvx-pin-note">Gửi PIN này cho nhân viên, chỉ hiện 1 lần.</div>' +
+          '<button type="button" class="btn btn-ghost btn-sm" onclick="anPin()">Đã gửi — ẩn đi</button>' +
+        '</div>';
+    }
+    function anPin() { $('nvPinKQ').innerHTML = ''; }
+
+    function nvLuuViTri(i, btn) {
+      if (nvBusy) return;
+      var n = nvItem(i), sel = $('nvxvt-' + i);
+      if (!n || !sel) return;
+      var vt = sel.value;
+      if (!vt) { showBox($('nvBox'), 'err', 'Chọn vị trí trước khi lưu.'); return; }
+      if (String(vt) === String(n.viTri == null ? '' : n.viTri)) { showBox($('nvBox'), 'err', 'Vị trí không thay đổi.'); return; }
+      if (!window.confirm('Đổi vị trí của ' + n.ten + ' thành "' + vt + '"?\nLương từ nay tính theo đơn giá của vị trí mới.')) return;
+      nvGoi({ api: 'nvsua', mk: mk, ten: n.ten, viTriMoi: vt }, btn, 'Đã đổi vị trí.', $('nvBox'));
+    }
+
+    function nvResetPin(i, btn) {
+      if (nvBusy) return;
+      var n = nvItem(i);
+      if (!n) return;
+      if (!window.confirm('Cấp PIN mới cho ' + n.ten + '?\nPIN cũ sẽ không dùng được nữa — nhớ gửi PIN mới cho nhân viên.')) return;
+      nvGoi({ api: 'nvresetpin', mk: mk, ten: n.ten }, btn, 'Đã cấp PIN mới.', $('nvBox'), function (res) {
+        hienPin(n.ten, res.pin);
+      });
+    }
+
+    function nvDoiActive(i, btn) {
+      if (nvBusy) return;
+      var n = nvItem(i);
+      if (!n) return;
+      var moi = !n.active;
+      var hoi = moi
+        ? ('Cho ' + n.ten + ' đi làm lại?\nNhân viên sẽ hiện lại trong form chấm công.')
+        : ('Cho ' + n.ten + ' nghỉ?\nNhân viên sẽ bị ẩn khỏi form chấm công (không chấm công được nữa).\nDữ liệu chấm công cũ vẫn giữ nguyên.');
+      if (!window.confirm(hoi)) return;
+      nvGoi({ api: 'nvactive', mk: mk, ten: n.ten, active: moi }, btn, moi ? 'Đã cho làm lại.' : 'Đã cho nghỉ.', $('nvBox'));
+    }
+
+    function nvMoThem() {
+      var el = $('nvFormThem');
+      if (!el) return;
+      var mo = (el.style.display === 'none');
+      el.style.display = mo ? 'block' : 'none';
+      if (mo) $('nvThemVT').innerHTML = nvSelectVT('nvThemViTri', '');
+    }
+
+    function nvThem(btn) {
+      if (nvBusy) return;
+      var ten = $('nvThemTen').value.trim();
+      var pin = $('nvThemPin').value.trim();
+      var sel = $('nvThemViTri');
+      var vt = sel ? sel.value : '';
+      if (!ten) { showBox($('nvBox'), 'err', 'Nhập tên nhân viên.'); return; }
+      if (pin && !/^\d{4}$/.test(pin)) { showBox($('nvBox'), 'err', 'PIN phải đúng 4 chữ số (hoặc để trống cho máy tự sinh).'); return; }
+      if (!vt) { showBox($('nvBox'), 'err', 'Chọn vị trí cho nhân viên.'); return; }
+      if (!window.confirm('Thêm nhân viên "' + ten + '" — vị trí ' + vt + '?' + (pin ? '' : '\nPIN để trống → máy tự sinh 4 số.'))) return;
+      nvGoi({ api: 'nvthem', mk: mk, ten: ten, pin: pin, viTri: vt }, btn, 'Đã thêm nhân viên.', $('nvBox'), function (res) {
+        hienPin(ten, res.pin);
+        $('nvThemTen').value = ''; $('nvThemPin').value = '';
+        $('nvFormThem').style.display = 'none';
+      });
+    }
+
+    // ===== Vị trí & đơn giá =====
+    function vtMoSua(i) {
+      var el = $('vts-' + i);
+      if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+    }
+    function vtDongSua(i) {
+      var el = $('vts-' + i);
+      if (el) el.style.display = 'none';
+    }
+
+    function vtItem(i) {
+      var ds = (nvData && nvData.viTri) || [];
+      return ds[i] || null;
+    }
+
+    function vtSoTien(el) {
+      var s = String(el.value).trim().replace(/[.,\s]/g, '');
+      if (!/^\d+$/.test(s)) return null;
+      var g = Number(s);
+      return (g > 0) ? g : null;
+    }
+
+    function vtLuu(i, btn) {
+      if (nvBusy) return;
+      var v = vtItem(i), el = $('vtg-' + i);
+      if (!v || !el) return;
+      var g = vtSoTien(el);
+      if (g === null) { showBox($('vtBox'), 'err', 'Đơn giá phải là số (chỉ chữ số), lớn hơn 0.'); return; }
+      if (!window.confirm('Đổi đơn giá vị trí "' + v.ten + '" thành ' + vnd(g) + ' đ/giờ?\nÁp cho MỌI nhân viên vị trí này và cả kỳ đang tính — nên đổi vào đầu kỳ.')) return;
+      nvGoi({ api: 'vitrisua', mk: mk, viTri: v.ten, donGia: g }, btn, 'Đã đổi đơn giá.', $('vtBox'));
+    }
+
+    function vtMoThem() {
+      var el = $('vtFormThem');
+      if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+    }
+
+    function vtThem(btn) {
+      if (nvBusy) return;
+      var ten = $('vtThemTen').value.trim();
+      var g = vtSoTien($('vtThemGia'));
+      if (!ten) { showBox($('vtBox'), 'err', 'Nhập tên vị trí.'); return; }
+      if (g === null) { showBox($('vtBox'), 'err', 'Đơn giá phải là số (chỉ chữ số), lớn hơn 0.'); return; }
+      if (!window.confirm('Thêm vị trí "' + ten + '" — ' + vnd(g) + ' đ/giờ?')) return;
+      nvGoi({ api: 'vitrithem', mk: mk, viTri: ten, donGia: g }, btn, 'Đã thêm vị trí.', $('vtBox'), function () {
+        $('vtThemTen').value = ''; $('vtThemGia').value = '';
+        $('vtFormThem').style.display = 'none';
+      });
     }
 
     // ===== Vỏ app: service worker + ẩn màn hình chờ khi UI đã sẵn sàng =====
