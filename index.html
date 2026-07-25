@@ -23,9 +23,30 @@
       line-height: 1.6;
     }
     .fallback a { color: #fff; font-weight: 700; word-break: break-all; }
+    /* Màn hình chờ — hiện NGAY khi mở app, ẩn khi trang duyệt tải xong (Apps Script mất vài giây) */
+    .splash {
+      position: fixed; inset: 0; background: #4A6741; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      transition: opacity .35s; line-height: 1.5;
+    }
+    .splash.hide { opacity: 0; pointer-events: none; }
+    .splash .logo { color: #F2D3BE; font-weight: 800; font-size: 40px; letter-spacing: 4px; }
+    .splash .sub { color: #F2D3BE; opacity: .85; font-size: 15px; }
+    .splash .spin {
+      width: 30px; height: 30px; border-radius: 50%;
+      border: 3px solid rgba(242, 211, 190, .3); border-top-color: #F2D3BE;
+      animation: quay .9s linear infinite;
+    }
+    @keyframes quay { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
+  <div class="splash" id="splash">
+    <div class="logo">DOME</div>
+    <div class="spin"></div>
+    <div class="sub">Đang mở trang duyệt...</div>
+  </div>
   <iframe id="app" src="https://script.google.com/macros/s/AKfycbw3vn-lFN_lRWLkekLEEgguCi19xtsb-96nFIwMO_slqm9Pyj3dId6RZOlTD16wJudD/exec?duyet=1"
           title="Duyệt chấm công DOME" allow="clipboard-write"></iframe>
   <div class="fallback" id="fb">
@@ -35,11 +56,15 @@
   </div>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-    // Nếu iframe không load được (mất mạng...) thì hiện fallback sau 15s
+    // Trang duyệt tải xong → ẩn màn hình chờ. Không tải được (mất mạng...) → fallback sau 15s.
     var loaded = false;
-    document.getElementById('app').addEventListener('load', function () { loaded = true; });
+    document.getElementById('app').addEventListener('load', function () {
+      loaded = true;
+      document.getElementById('splash').className = 'splash hide';
+    });
     setTimeout(function () {
       if (!loaded) {
+        document.getElementById('splash').className = 'splash hide';
         document.getElementById('app').style.display = 'none';
         document.getElementById('fb').style.display = 'block';
       }
