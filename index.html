@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Duyệt DOME</title>
+  <meta name="theme-color" content="#4A6741">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <!-- iOS mở từ màn hình chính dạng app -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Duyệt DOME">
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #4A6741; }
+    iframe {
+      border: 0; width: 100%; height: 100vh; height: 100dvh; display: block;
+    }
+    .fallback {
+      display: none; color: #F2D3BE; text-align: center; padding: 48px 24px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+    }
+    .fallback a { color: #fff; font-weight: 700; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <iframe id="app" src="https://script.google.com/macros/s/AKfycbw3vn-lFN_lRWLkekLEEgguCi19xtsb-96nFIwMO_slqm9Pyj3dId6RZOlTD16wJudD/exec?duyet=1"
+          title="Duyệt chấm công DOME" allow="clipboard-write"></iframe>
+  <div class="fallback" id="fb">
+    Không tải được trang duyệt.<br>Kiểm tra mạng rồi mở lại app, hoặc bấm link:
+    <br><br>
+    <a href="https://script.google.com/macros/s/AKfycbw3vn-lFN_lRWLkekLEEgguCi19xtsb-96nFIwMO_slqm9Pyj3dId6RZOlTD16wJudD/exec?duyet=1">Mở trang duyệt trực tiếp</a>
+  </div>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+    // Nếu iframe không load được (mất mạng...) thì hiện fallback sau 15s
+    var loaded = false;
+    document.getElementById('app').addEventListener('load', function () { loaded = true; });
+    setTimeout(function () {
+      if (!loaded) {
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('fb').style.display = 'block';
+      }
+    }, 15000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "Duyệt chấm công DOME saigon",
+  "short_name": "Duyệt DOME",
+  "description": "Trang duyệt điều chỉnh giờ chấm công của DOME saigon",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#4A6741",
+  "theme_color": "#4A6741",
+  "lang": "vi",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
