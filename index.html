@@ -54,28 +54,48 @@
   <iframe id="app" src="https://script.google.com/macros/s/AKfycbw3vn-lFN_lRWLkekLEEgguCi19xtsb-96nFIwMO_slqm9Pyj3dId6RZOlTD16wJudD/exec?duyet=1"
           title="Duyệt chấm công DOME" allow="clipboard-write"></iframe>
   <div class="fallback" id="fb">
-    Không tải được trang duyệt.<br>Kiểm tra mạng rồi mở lại app, hoặc bấm link:
+    Mạng đang chậm, chưa tải được trang duyệt.
     <br><br>
-    <a href="https://script.google.com/macros/s/AKfycbw3vn-lFN_lRWLkekLEEgguCi19xtsb-96nFIwMO_slqm9Pyj3dId6RZOlTD16wJudD/exec?duyet=1">Mở trang duyệt trực tiếp</a>
+    <button type="button" onclick="thuLai()"
+      style="min-height:48px;padding:0 28px;border:none;border-radius:12px;background:#F2D3BE;color:#4A6741;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer">
+      Thử lại
+    </button>
+    <br><br>
+    <a href="https://script.google.com/macros/s/AKfycbw3vn-lFN_lRWLkekLEEgguCi19xtsb-96nFIwMO_slqm9Pyj3dId6RZOlTD16wJudD/exec?duyet=1">Hoặc mở trang duyệt trực tiếp</a>
   </div>
   <script>
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-    // Trang duyệt tải xong → ẩn màn hình chờ. Không tải được (mất mạng...) → fallback sau 15s.
-    var loaded = false;
-    document.getElementById('app').addEventListener('load', function () {
+    // Trang duyệt tải xong → ẩn màn hình chờ. Mạng chậm quá 30s → fallback có nút Thử lại
+    // (trang về trễ sau đó vẫn tự phục hồi màn hình app).
+    var elApp = document.getElementById('app');
+    var elFb = document.getElementById('fb');
+    var elSplash = document.getElementById('splash');
+    var loaded = false, timer = null;
+    elApp.addEventListener('load', function () {
       loaded = true;
-      document.getElementById('splash').className = 'splash hide';
-      // Mạng chậm quá 15s đã hiện fallback nhưng trang vẫn về được → trả lại màn hình app
-      document.getElementById('app').style.display = 'block';
-      document.getElementById('fb').style.display = 'none';
+      elSplash.className = 'splash hide';
+      elApp.style.display = 'block';
+      elFb.style.display = 'none';
     });
-    setTimeout(function () {
-      if (!loaded) {
-        document.getElementById('splash').className = 'splash hide';
-        document.getElementById('app').style.display = 'none';
-        document.getElementById('fb').style.display = 'block';
-      }
-    }, 15000);
+    function henGioFallback() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function () {
+        if (!loaded) {
+          elSplash.className = 'splash hide';
+          elApp.style.display = 'none';
+          elFb.style.display = 'block';
+        }
+      }, 30000);
+    }
+    function thuLai() {
+      loaded = false;
+      elFb.style.display = 'none';
+      elApp.style.display = 'block';
+      elSplash.className = 'splash';
+      elApp.src = elApp.src; // nạp lại trang duyệt tại chỗ, khỏi đóng mở app
+      henGioFallback();
+    }
+    henGioFallback();
   </script>
 </body>
 </html>
