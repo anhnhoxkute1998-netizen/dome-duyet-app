@@ -61,6 +61,9 @@
     document.getElementById('app').addEventListener('load', function () {
       loaded = true;
       document.getElementById('splash').className = 'splash hide';
+      // Mạng chậm quá 15s đã hiện fallback nhưng trang vẫn về được → trả lại màn hình app
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('fb').style.display = 'none';
     });
     setTimeout(function () {
       if (!loaded) {
