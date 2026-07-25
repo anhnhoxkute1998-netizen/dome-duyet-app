@@ -88,12 +88,16 @@
     /* ===== Màn Tính lương ===== */
     .range { display: flex; gap: 10px; }
     .range .f { flex: 1; }
-    input[type=date] {
+    input[type=date], input[type=time] {
       width: 100%; min-height: 48px; border: 1px solid var(--border); border-radius: var(--radius);
       padding: 10px 12px; font-size: 16px; font-family: inherit; background: #fff; color: inherit;
-      /* iOS Safari đời cũ bóp input date theo kích thước mặc định khi chưa nhập */
+      /* iOS Safari đời cũ bóp input date/time theo kích thước mặc định khi chưa nhập */
       -webkit-appearance: none; appearance: none; display: block; min-width: 100%;
     }
+    /* Khối "Sửa giờ rồi duyệt" trên thẻ ticket */
+    .sua-link { margin-top: 8px; font-size: 13.5px; }
+    .sua-link a { color: var(--primary); font-weight: 600; }
+    .sua { margin-top: 10px; background: #f7f5ef; border: 1px dashed var(--border); border-radius: 10px; padding: 10px 11px; }
     .chips { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
     .chip {
       border: 1px solid var(--primary); background: #fff; color: var(--primary); border-radius: 999px;
@@ -316,6 +320,20 @@
                 (t.bu ? '<button type="button" class="btn btn-approve btn-sm" onclick="doDuyet(' + row + ', this)">Duyệt</button>' : '') +
                 '<button type="button" class="btn btn-reject btn-sm" onclick="doTuChoi(' + row + ', this)">Từ chối</button>' +
                 '</div>';
+        if (t.bu) {
+          // Sửa giờ rồi duyệt — khi nhân viên khai nhầm giờ (vd khai giờ gửi form thay vì giờ vào thật)
+          html += '<div class="sua-link"><a href="javascript:void(0)" onclick="moSua(' + row + ')">✎ Sửa giờ rồi duyệt</a></div>' +
+            '<div class="sua" id="sua-' + row + '" style="display:none">' +
+              '<div class="range">' +
+                '<div class="f"><label class="lbl" for="suaNgay-' + row + '">Ngày bù</label><input type="date" id="suaNgay-' + row + '" value="' + esc(t.bu.ngayISO || '') + '"></div>' +
+                '<div class="f"><label class="lbl" for="suaGio-' + row + '">Giờ bù</label><input type="time" id="suaGio-' + row + '" value="' + esc(t.bu.gio || '') + '"></div>' +
+              '</div>' +
+              '<div class="acts">' +
+                '<button type="button" class="btn btn-approve btn-sm" onclick="doDuyetSua(' + row + ', this)">Duyệt với giờ này</button>' +
+                '<button type="button" class="btn btn-ghost btn-sm" onclick="dongSua(' + row + ')">Đóng</button>' +
+              '</div>' +
+            '</div>';
+        }
         div.innerHTML = html;
         list.appendChild(div);
       });
@@ -361,6 +379,34 @@
       if (busy) return;
       if (!window.confirm('Từ chối ticket này? Ticket sẽ được đánh dấu "Loại" và không tính giờ.')) return;
       doAction('tuchoi', row, btn);
+    }
+
+    // ===== SỬA GIỜ RỒI DUYỆT =====
+    function moSua(row) {
+      var el = $('sua-' + row);
+      if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+    }
+    function dongSua(row) {
+      var el = $('sua-' + row);
+      if (el) el.style.display = 'none';
+    }
+    function doDuyetSua(row, btn) {
+      if (busy) return;
+      var ngay = $('suaNgay-' + row).value, gio = $('suaGio-' + row).value;
+      if (!ngay || !gio) { showBox($('boardBox'), 'err', 'Chọn đủ Ngày bù và Giờ bù.'); return; }
+      var hienThi = ngay.slice(8, 10) + '/' + ngay.slice(5, 7) + '/' + ngay.slice(0, 4) + ' ' + gio;
+      if (!window.confirm('Duyệt với giờ ĐÃ CHỈNH: ' + hienThi + '?\nMáy sẽ tạo dòng chấm bù theo giờ này và ghi rõ dấu vết chỉnh vào Sheet.')) return;
+      lockActs(true); btn.textContent = 'Đang xử lý...';
+      goiApi({ api: 'duyet', mk: mk, row: row, ngayMoi: ngay, gioMoi: gio }, function (res) {
+        lockActs(false); btn.textContent = 'Duyệt với giờ này';
+        var ok = !!(res && res.ok);
+        showBox($('boardBox'), ok ? 'ok' : 'err', (res && res.message) ? res.message : 'Không rõ kết quả.');
+        if (ok) removeCard(btn); else loadList();
+      }, function (msg) {
+        lockActs(false); btn.textContent = 'Duyệt với giờ này';
+        showBox($('boardBox'), 'err', msg);
+        loadList();
+      });
     }
 
     // ===== TAB TÍNH LƯƠNG (chỉ xem — server verify mã mỗi call, không ghi gì vào Sheet) =====
