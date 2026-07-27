@@ -194,6 +194,24 @@
     .ck-row .ky2 { font-weight: 700; flex: 1; }
     .ck-row .tien2 { white-space: nowrap; font-weight: 700; color: var(--primary-dark); }
     .ck-row .luc2 { width: 100%; font-size: 12px; color: var(--muted); }
+    /* ===== v13: DẢI TỔNG QUAN (trên đầu vùng nội dung, hiện ở mọi tab) ===== */
+    .tq { display: none; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+    .tq-o {
+      min-height: 58px; padding: 7px 2px; border-radius: var(--radius); font-family: inherit; cursor: pointer;
+      background: var(--card); border: 1px solid var(--border); color: inherit; text-align: center; line-height: 1.35;
+    }
+    .tq-o .tq-so { display: block; font-weight: 800; font-size: 17px; color: var(--primary-dark); }
+    .tq-o .tq-nh { display: block; font-size: clamp(10.5px, 2.9vw, 12.5px); color: var(--muted); white-space: nowrap; }
+    .tq-o.do .tq-so { color: var(--err); }
+    /* nhãn "đang cập nhật..." cạnh nút Tải lại (cache phiên) */
+    .dangcn { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    /* ===== v13: ảnh chấm công inline trong thẻ ticket ===== */
+    .anh-xem { display: block; margin-top: 8px; max-width: 100%; border-radius: 10px; cursor: pointer; }
+    /* ===== v13: khu Quản trị cuối tab Nhân viên ===== */
+    .qt-nk { margin-top: 6px; }
+    .qt-nk .r2 { font-size: 13px; padding: 7px 0; border-top: 1px dashed var(--border); }
+    .qt-nk .r2 .n2 { color: var(--muted); margin-right: 6px; }
+    .qt-nk .r2 .h2x { font-weight: 600; }
     /* ===== Màn hình chờ — che nhịp render đầu, ẩn ngay khi UI sẵn sàng ===== */
     .splash {
       position: fixed; inset: 0; background: var(--primary); z-index: 10;
@@ -245,11 +263,20 @@
       <button type="button" class="tab" id="tabNhanVien" onclick="moTab('nhanvien')">👥 Nhân viên</button>
     </div>
 
+    <!-- ===== DẢI TỔNG QUAN (v13) — hiện ở MỌI tab, bấm ô để nhảy tab ===== -->
+    <div id="tongquan" class="tq">
+      <button type="button" class="tq-o" onclick="moTab('homnay')"><span class="tq-so" id="tqDang">—</span><span class="tq-nh">🟢 đang ca</span></button>
+      <button type="button" class="tq-o do" onclick="moTab('homnay')"><span class="tq-so" id="tqQuen">—</span><span class="tq-nh">🔴 quên out</span></button>
+      <button type="button" class="tq-o" onclick="moTab('ticket')"><span class="tq-so" id="tqTicket">—</span><span class="tq-nh">📋 ticket</span></button>
+      <button type="button" class="tq-o" onclick="moTab('nhanvien')"><span class="tq-so" id="tqTien">—</span><span class="tq-nh">💵 còn trả</span></button>
+    </div>
+
     <!-- ===== MÀN DANH SÁCH ===== -->
     <div id="board" class="card" style="display:none">
       <div class="topbar">
         <h3>Ticket chờ duyệt</h3>
         <span class="count" id="count"></span>
+        <span class="dangcn" id="cnTicket" style="display:none">đang cập nhật…</span>
         <button type="button" class="btn btn-ghost btn-sm" style="width:auto;padding:0 14px" onclick="loadList()">Tải lại</button>
       </div>
       <div id="boardBox" class="box"></div>
@@ -262,6 +289,7 @@
       <div class="topbar">
         <h3>Hôm nay</h3>
         <span class="count" id="hnNgay"></span>
+        <span class="dangcn" id="cnHomNay" style="display:none">đang cập nhật…</span>
         <button type="button" class="btn btn-ghost btn-sm" style="width:auto;padding:0 14px" onclick="taiHomNay()">Tải lại</button>
       </div>
       <div id="hnBox" class="box"></div>
@@ -319,6 +347,7 @@
       <div class="topbar">
         <h3>Nhân viên</h3>
         <span class="count" id="nvCount"></span>
+        <span class="dangcn" id="cnNhanVien" style="display:none">đang cập nhật…</span>
         <button type="button" class="btn btn-ghost btn-sm" style="width:auto;padding:0 14px" onclick="taiNhanVien()">Tải lại</button>
       </div>
       <div id="nvBox" class="box"></div>
@@ -359,6 +388,22 @@
           <button type="button" class="btn btn-ghost btn-sm" onclick="vtMoThem()">Đóng</button>
         </div>
       </div>
+
+      <!-- ===== ⚙️ QUẢN TRỊ (v13) — nhật ký + CSV toàn sổ + sao lưu ===== -->
+      <div class="nvx-sec">⚙️ Quản trị</div>
+      <div id="qtBox" class="box"></div>
+      <div class="field">
+        <button type="button" class="btn btn-ghost" onclick="qtNhatKyMo()">📜 Nhật ký thay đổi</button>
+      </div>
+      <div id="qtNhatKy" class="qt-nk" style="display:none"></div>
+      <div class="nvx-row">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="qtCsvChiTra(this)">⬇ CSV sổ chi trả</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="qtCsvKyChot(this)">⬇ CSV kỳ đã chốt</button>
+      </div>
+      <div class="field">
+        <button type="button" class="btn btn-ghost" onclick="qtBackup(this)">💾 Sao lưu ngay</button>
+      </div>
+      <div class="hint">Sao lưu tự động hàng tuần: nhờ đệ/đại ca cài trigger <b>backupTuan</b> trong Apps Script (1 lần).</div>
     </div>
   </div>
 
@@ -369,8 +414,19 @@
     var API_URL = 'https://script.google.com/macros/s/AKfycbw3vn-lFN_lRWLkekLEEgguCi19xtsb-96nFIwMO_slqm9Pyj3dId6RZOlTD16wJudD/exec';
 
     var mk = '';           // giữ trong RAM, không lưu localStorage
-    var ngayChot = '';     // lấy từ response 'tickets' lúc mở khóa
+    var ngayChot = '';     // lấy từ response 'bootstrap' lúc mở khóa
+    var tenQuan = '';      // v13 — bootstrap trả về (dùng cho tên file xuất/nhãn sau này)
     var busy = false;
+
+    // v13 — cache phiên CHỈ RAM (không localStorage): mở tab có cache → render ngay rồi tải ngầm.
+    var phienCache = { ticket: null, homnay: null, nvlist: null, sodu: null };   // mỗi ô: {data, luc}
+
+    // v13 — api ĐỌC được tự thử lại 1 lần khi lỗi mạng; api GHI thì KHÔNG (tránh ghi trùng).
+    var API_DOC = {
+      bootstrap: 1, tickets: 1, homnay: 1, tinhluong: 1, nvlist: 1, sodu: 1,
+      kydachot: 1, chitralist: 1, nhatky: 1, chitraall: 1, kychotall: 1, anh: 1
+    };
+    function laApiDoc(api) { return API_DOC[String(api == null ? '' : api)] === 1; }
 
     var $ = function (id) { return document.getElementById(id); };
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); }
@@ -381,7 +437,8 @@
     // ===== Gọi API Apps Script =====
     // Content-Type text/plain để tránh preflight CORS. Timeout 30s.
     // onOk(res) nhận JSON đã parse; onErr(msg) nhận câu báo lỗi tiếng Việt sẵn để hiện.
-    function goiApi(payload, onOk, onErr) {
+    // daThu = true khi đây đã là lần thử lại (không thử lại lần nữa).
+    function goiApi(payload, onOk, onErr, daThu) {
       var xong = false;
       var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
       var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 30000);
@@ -405,27 +462,67 @@
       })['catch'](function () {
         clearTimeout(timer);
         if (xong) return;   // lỗi phát sinh trong onOk/onErr — không báo nhầm là lỗi mạng
+        // v13 — lỗi MẠNG/timeout của lệnh ĐỌC: tự thử lại đúng 1 lần sau 1.5s rồi mới báo.
+        if (daThu !== true && laApiDoc(payload && payload.api)) {
+          setTimeout(function () { goiApi(payload, onOk, onErr, true); }, 1500);
+          return;
+        }
         onErr('Mạng yếu, thử lại.');
       });
     }
 
+    // ===== v13 — DẢI TỔNG QUAN =====
+    // Tiền rút gọn cho ô hẹp: 0 → '0đ'; <1tr → '855k'; ≥1tr → '4,4tr'
+    function tienGon(n) {
+      n = Number(n);
+      if (!isFinite(n)) n = 0;
+      if (n < 0) return '-' + tienGon(-n);
+      if (n >= 1000000) return String(Math.round(n / 100000) / 10).replace('.', ',') + 'tr';
+      if (n >= 1000) return Math.round(n / 1000) + 'k';
+      return n + 'đ';
+    }
+
+    // Nhãn "đang cập nhật…" cạnh nút Tải lại của từng tab
+    function nhanCN(id, hien) {
+      var el = $(id);
+      if (el) el.style.display = hien ? 'inline' : 'none';
+    }
+
+    // Gọi mỗi khi tickets / homnay / sodu có data mới (và sau khi xóa thẻ ticket tại chỗ).
+    function capNhatTongQuan() {
+      var hn = phienCache.homnay ? phienCache.homnay.data : null;
+      var sd = phienCache.sodu ? phienCache.sodu.data : null;
+      $('tqDang').textContent = hn ? String((hn.dangLam || []).length) : '—';
+      $('tqQuen').textContent = hn ? String((hn.quenCheckout || []).length) : '—';
+      // đếm thẻ đang có trên màn — duyệt/từ chối xóa thẻ tại chỗ là dải khớp ngay
+      $('tqTicket').textContent = phienCache.ticket ? String(document.querySelectorAll('#list .ticket').length) : '—';
+      $('tqTien').textContent = sd ? tienGon(sd.tongConLai) : '—';
+    }
+
     $('mk').addEventListener('keydown', function (e) { if (e.key === 'Enter') doOpen(); });
 
-    // ===== MỞ KHÓA (dùng luôn api tickets làm bước đăng nhập) =====
+    // ===== MỞ KHÓA (v13: 1 call 'bootstrap' — tickets + hôm nay + số dư trong cùng response) =====
     function doOpen() {
       var val = $('mk').value.trim();
       if (!val) { showBox($('lockBox'), 'err', 'Vui lòng nhập mã duyệt.'); return; }
       $('btnOpen').disabled = true; $('btnOpen').textContent = 'Đang kiểm tra...';
       hideBox($('lockBox'));
-      goiApi({ api: 'tickets', mk: val }, function (res) {
+      goiApi({ api: 'bootstrap', mk: val }, function (res) {
         $('btnOpen').disabled = false; $('btnOpen').textContent = 'Mở trang duyệt';
         if (res && res.ok) {
           mk = val;
           ngayChot = (res.ngayChot == null) ? '' : res.ngayChot;
+          tenQuan = (res.tenQuan == null) ? '' : res.tenQuan;
           $('lock').style.display = 'none';
           $('tabs').style.display = 'flex';
+          $('tongquan').style.display = 'grid';
           $('board').style.display = 'block';
           renderList(res);
+          // đổ sẵn cache phiên để mở tab Hôm nay / Nhân viên là có số ngay
+          phienCache.ticket = { data: res, luc: Date.now() };
+          if (res.homnay) phienCache.homnay = { data: res.homnay, luc: Date.now() };
+          if (res.soDu) phienCache.sodu = { data: res.soDu, luc: Date.now() };
+          capNhatTongQuan();
         } else {
           showBox($('lockBox'), 'err', (res && res.message) ? res.message : 'Không mở được.');
         }
@@ -439,11 +536,23 @@
       if (!mk || busy) return;
       hideBox($('boardBox'));
       goiApi({ api: 'tickets', mk: mk }, function (res) {
-        if (res && res.ok) renderList(res);
-        else showBox($('boardBox'), 'err', (res && res.message) ? res.message : 'Không tải được.');
+        nhanCN('cnTicket', false);
+        if (res && res.ok) {
+          phienCache.ticket = { data: res, luc: Date.now() };   // v13 — cache phiên
+          renderList(res);
+          capNhatTongQuan();
+        } else showBox($('boardBox'), 'err', (res && res.message) ? res.message : 'Không tải được.');
       }, function (msg) {
+        nhanCN('cnTicket', false);
         showBox($('boardBox'), 'err', msg);
       });
+    }
+
+    // v13 — mở tab Duyệt: có cache thì hiện ngay rồi tải ngầm (hiện-cũ-tải-mới)
+    function taiTicketCache() {
+      if (!mk) return;
+      if (phienCache.ticket) { renderList(phienCache.ticket.data); nhanCN('cnTicket', true); }
+      loadList();
     }
 
     function renderList(res) {
@@ -465,7 +574,12 @@
           html += '<div class="bu-warn">⚠ Ticket không có thông tin bù (gửi từ form cũ). Không duyệt được ở đây — dùng menu "Duyệt điều chỉnh giờ..." trên máy tính.</div>';
         }
         if (t.note) html += '<div class="note"><span class="k">Ghi chú:</span> ' + esc(t.note) + '</div>';
-        if (t.anhUrl && String(t.anhUrl).indexOf('http') === 0) html += '<div class="links"><a href="' + esc(t.anhUrl) + '" target="_blank" rel="noopener">📷 Xem ảnh</a></div>';
+        // v13 — bấm để xem ảnh NGAY trong thẻ; href Drive giữ nguyên làm fallback khi tải ảnh lỗi
+        if (t.anhUrl && String(t.anhUrl).indexOf('http') === 0) {
+          html += '<div class="links" id="anh-' + row + '">' +
+            '<a href="' + esc(t.anhUrl) + '" target="_blank" rel="noopener" onclick="return anhBam(' + row + ', this)">📷 Xem ảnh</a>' +
+            '</div>';
+        }
         html += '<div class="acts">' +
                 (t.bu ? '<button type="button" class="btn btn-approve btn-sm" onclick="doDuyet(' + row + ', this)">Duyệt</button>' : '') +
                 '<button type="button" class="btn btn-reject btn-sm" onclick="doTuChoi(' + row + ', this)">Từ chối</button>' +
@@ -489,6 +603,68 @@
       });
     }
 
+    // ===== v13 — ẢNH CHẤM CÔNG INLINE (api 'anh' trả base64; server đã chặn file ngoài folder ảnh) =====
+    var anhCache = {};   // fileId -> data URI (RAM trong phiên)
+
+    // id file Drive nằm trong link dạng .../d/<id>/view hoặc ?id=<id>
+    function layFileId(url) {
+      var m = String(url == null ? '' : url).match(/[-\w]{25,}/);
+      return m ? m[0] : '';
+    }
+    // chỉ nhận mime ảnh + base64 sạch — không để chuỗi lạ chui vào thuộc tính src
+    function anhHopLe(mime, b64) {
+      return /^image\/[-\w.+]{1,40}$/.test(String(mime == null ? '' : mime)) &&
+             /^[A-Za-z0-9+/=]+$/.test(String(b64 == null ? '' : b64));
+    }
+
+    function anhHien(row, src) {
+      var hop = $('anh-' + row);
+      if (!hop) return;
+      var img = $('anhimg-' + row);
+      if (!img) {
+        img = document.createElement('img');
+        img.className = 'anh-xem';
+        img.id = 'anhimg-' + row;
+        img.alt = 'Ảnh chấm công';
+        img.setAttribute('onclick', 'anhAn(' + row + ')');
+        img.setAttribute('src', src);
+        hop.appendChild(img);
+      }
+      img.style.display = 'block';
+    }
+    function anhAn(row) {
+      var img = $('anhimg-' + row);
+      if (img) img.style.display = 'none';
+    }
+
+    // Trả false = đã xử lý trong app; true = để trình duyệt mở link Drive (fallback).
+    function anhBam(row, a) {
+      if (a.getAttribute('data-loi') === '1') return true;   // lần trước lỗi → mở Drive
+      var img = $('anhimg-' + row);
+      if (img) { img.style.display = (img.style.display === 'none') ? 'block' : 'none'; return false; }
+      var id = layFileId(a.getAttribute('href'));
+      if (!id || !mk) return true;
+      if (anhCache[id]) { anhHien(row, anhCache[id]); return false; }
+      a.textContent = '📷 Đang tải ảnh...';
+      goiApi({ api: 'anh', mk: mk, fileId: id }, function (res) {
+        if (res && res.ok && anhHopLe(res.mime, res.b64)) {
+          a.textContent = '📷 Xem ảnh';
+          var src = 'data:' + res.mime + ';base64,' + res.b64;
+          anhCache[id] = src;
+          anhHien(row, src);
+        } else {
+          anhLoi(a, (res && res.message) ? res.message : 'Không tải được ảnh.');
+        }
+      }, function (msg) {
+        anhLoi(a, msg);
+      });
+      return false;
+    }
+    function anhLoi(a, msg) {
+      a.setAttribute('data-loi', '1');
+      a.textContent = '📷 Mở ảnh trên Drive (' + msg + ')';
+    }
+
     function lockActs(disabled) {
       busy = disabled;
       Array.prototype.forEach.call(document.querySelectorAll('.acts .btn'), function (b) { b.disabled = disabled; });
@@ -501,6 +677,7 @@
       var n = document.querySelectorAll('#list .ticket').length;
       $('count').textContent = n ? (n + ' ticket') : '';
       $('empty').style.display = n ? 'none' : 'block';
+      capNhatTongQuan();   // v13 — ô 📋 ticket khớp ngay sau khi duyệt/từ chối
     }
 
     function doAction(api, row, btn) {
@@ -572,6 +749,7 @@
       $('tabHomNay').className = 'tab' + (t === 'homnay' ? ' on' : '');
       $('tabLuong').className = 'tab' + (t === 'luong' ? ' on' : '');
       $('tabNhanVien').className = 'tab' + (t === 'nhanvien' ? ' on' : '');
+      if (t === 'ticket') taiTicketCache();                // v13: hiện cache rồi tải ngầm
       if (t === 'luong' && !$('tuNgay').value) chonKy(0); // lần đầu mở: tự chọn kỳ này + tính luôn
       if (t === 'homnay') taiHomNay();                    // mỗi lần mở tab là lấy số liệu tươi
       if (t === 'nhanvien') taiNhanVien();                // mỗi lần mở tab là lấy danh sách tươi
@@ -586,18 +764,25 @@
       if (!mk || hnBusy) return;
       hnBusy = true;
       hideBox($('hnBox'));
-      $('hnKQ').innerHTML = '<div class="empty">Đang tải...</div>';
+      // v13 — có cache phiên: render ngay + nhãn "đang cập nhật…", chưa có thì như cũ
+      var coCache = !!phienCache.homnay;
+      if (coCache) { renderHomNay(phienCache.homnay.data); nhanCN('cnHomNay', true); }
+      else $('hnKQ').innerHTML = '<div class="empty">Đang tải...</div>';
       goiApi({ api: 'homnay', mk: mk }, function (res) {
         hnBusy = false;
+        nhanCN('cnHomNay', false);
         if (!res || !res.ok) {
-          $('hnKQ').innerHTML = '';
+          if (!coCache) $('hnKQ').innerHTML = '';
           showBox($('hnBox'), 'err', (res && res.message) ? res.message : 'Không tải được, thử lại.');
           return;
         }
+        phienCache.homnay = { data: res, luc: Date.now() };
         renderHomNay(res);
+        capNhatTongQuan();
       }, function (msg) {
         hnBusy = false;
-        $('hnKQ').innerHTML = '';
+        nhanCN('cnHomNay', false);
+        if (!coCache) $('hnKQ').innerHTML = '';
         showBox($('hnBox'), 'err', msg);
       });
     }
@@ -731,6 +916,7 @@
 
     // ===== XUẤT CSV từ kết quả tính lương gần nhất (sinh ngay trên máy, không gọi server) =====
     function csvCell(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+    var CSV_BOM = String.fromCharCode(0xFEFF);   // v13 — dùng chung cho CSV khu Quản trị (Excel nhận UTF-8)
 
     function xuatCSV() {
       if (!luongData) return;
@@ -749,6 +935,11 @@
       });
       var csv = '\uFEFF' + lines.join('\r\n'); // BOM để Excel nhận UTF-8 tiếng Việt
       var tenFile = 'luong-DOME-' + String(r.tuNgay).replace(/\//g, '.') + '_' + String(r.denNgay).replace(/\//g, '.') + '.csv';
+      guiFileCSV(tenFile, csv);
+    }
+
+    // v13 — tách phần đóng gói + gửi file ra dùng chung cho CSV sổ chi trả / kỳ đã chốt
+    function guiFileCSV(tenFile, csv) {
       var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       // Ưu tiên share sheet (iPhone: gửi thẳng Zalo/Lưu vào Tệp); không có thì tải file thường
       var file = null;
@@ -775,19 +966,25 @@
       if (!mk || nvBusy) return;
       nvBusy = true;
       if (giuThongBao !== true) { hideBox($('nvBox')); hideBox($('vtBox')); }
-      $('nvKQ').innerHTML = '<div class="empty">Đang tải...</div>';
+      // v13 — có cache phiên: dựng lại danh sách ngay + nhãn "đang cập nhật…"
+      var coCache = !!phienCache.nvlist;
+      if (coCache) { nvData = phienCache.nvlist.data; renderNhanVien(nvData); nhanCN('cnNhanVien', true); }
+      else $('nvKQ').innerHTML = '<div class="empty">Đang tải...</div>';
       goiApi({ api: 'nvlist', mk: mk }, function (res) {
         nvBusy = false;
+        nhanCN('cnNhanVien', false);
         if (!res || !res.ok) {
-          $('nvKQ').innerHTML = ''; $('vtKQ').innerHTML = ''; $('nvCount').textContent = '';
+          if (!coCache) { $('nvKQ').innerHTML = ''; $('vtKQ').innerHTML = ''; $('nvCount').textContent = ''; }
           showBox($('nvBox'), 'err', (res && res.message) ? res.message : 'Không tải được, thử lại.');
           return;
         }
         nvData = res;
+        phienCache.nvlist = { data: res, luc: Date.now() };
         renderNhanVien(res);
       }, function (msg) {
         nvBusy = false;
-        $('nvKQ').innerHTML = '';
+        nhanCN('cnNhanVien', false);
+        if (!coCache) $('nvKQ').innerHTML = '';
         showBox($('nvBox'), 'err', msg);
       });
     }
@@ -1047,27 +1244,37 @@
     var sdBusy = false;
     var sdMap = null;    // null = chưa có số liệu; {} = đã gọi nhưng không có/không lấy được
 
+    // {ds:[...]} -> map theo tên (dùng cho cả response 'sodu' và khối soDu của 'bootstrap')
+    function sdMapTu(data) {
+      var m = {};
+      ((data && data.ds) || []).forEach(function (s) {
+        m[s.ten] = {
+          tong: (Number(s.tongChot) || 0) + (Number(s.congDangChay) || 0),
+          daChi: Number(s.daChi) || 0,
+          conLai: Number(s.conLai) || 0
+        };
+      });
+      return m;
+    }
+
     function sdTai() {
       if (!mk || sdBusy) return;
       sdBusy = true;
+      // v13 — có cache phiên thì hiện số dư cũ ngay, khỏi để "Đang tải số dư..."
+      if (phienCache.sodu) { sdMap = sdMapTu(phienCache.sodu.data); sdVaThe(); }
       goiApi({ api: 'sodu', mk: mk }, function (res) {
         sdBusy = false;
-        var m = {};
-        if (res && res.ok) {
-          (res.ds || []).forEach(function (s) {
-            m[s.ten] = {
-              tong: (Number(s.tongChot) || 0) + (Number(s.congDangChay) || 0),
-              daChi: Number(s.daChi) || 0,
-              conLai: Number(s.conLai) || 0
-            };
-          });
-        }
         // server chưa có api 'sodu' → sdMap = {} → khối ẩn, tab Nhân viên vẫn chạy như cũ
+        var m = (res && res.ok) ? sdMapTu(res) : {};
+        if (res && res.ok) {
+          phienCache.sodu = { data: { ds: res.ds || [], tongConLai: res.tongConLai }, luc: Date.now() };
+          capNhatTongQuan();
+        }
         sdMap = m;
         sdVaThe();
       }, function () {
         sdBusy = false;
-        sdMap = {};
+        if (!phienCache.sodu) sdMap = {};   // v13 — lỗi mạng mà có cache thì giữ số cũ trên màn
         sdVaThe();
       });
     }
@@ -1251,6 +1458,116 @@
         ckBusy = false;
         btn.disabled = false; btn.textContent = chuCu;
         showBox($('ckBox'), 'err', msg);
+      });
+    }
+
+    // ===== v13 — KHU ⚙️ QUẢN TRỊ (nhật ký / CSV toàn sổ / sao lưu) =====
+    var qtBusy = false;
+
+    // hậu tố ngày cho tên file: yyyyMMdd theo giờ máy
+    function ngayFile() {
+      var d = new Date();
+      return d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2);
+    }
+
+    function qtNhatKyMo() {
+      var el = $('qtNhatKy');
+      if (!el) return;
+      if (el.style.display === 'block') { el.style.display = 'none'; return; }
+      el.style.display = 'block';
+      qtNhatKyTai();
+    }
+
+    function qtNhatKyTai() {
+      if (!mk) return;
+      var el = $('qtNhatKy');
+      el.innerHTML = '<div class="hint">Đang tải nhật ký...</div>';
+      goiApi({ api: 'nhatky', mk: mk, soDong: 50 }, function (res) {
+        if (!res || !res.ok) {
+          el.innerHTML = '<div class="hint">' + esc((res && res.message) ? res.message : 'Không tải được nhật ký.') + '</div>';
+          return;
+        }
+        var ds = res.ds || [];
+        if (!ds.length) { el.innerHTML = '<div class="hint">Chưa có dòng nhật ký nào.</div>'; return; }
+        el.innerHTML = ds.map(function (x) {
+          return '<div class="r2"><span class="n2">' + esc(x.ngay) + '</span>' +
+                 '<span class="h2x">' + esc(x.hanhDong) + '</span>' +
+                 (x.chiTiet ? ' · ' + esc(x.chiTiet) : '') + '</div>';
+        }).join('');
+      }, function (msg) {
+        el.innerHTML = '<div class="hint">' + esc(msg) + '</div>';
+      });
+    }
+
+    // Gọi 1 api ĐỌC toàn sổ rồi sinh CSV ngay trên máy (không đụng dữ liệu).
+    function qtTaiCSV(api, btn, dungLines, tenFile) {
+      if (!mk || qtBusy) return;
+      qtBusy = true;
+      var chuCu = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Đang tải...'; }
+      hideBox($('qtBox'));
+      goiApi({ api: api, mk: mk }, function (res) {
+        qtBusy = false;
+        if (btn) { btn.disabled = false; btn.textContent = chuCu; }
+        if (!res || !res.ok) {
+          showBox($('qtBox'), 'err', (res && res.message) ? res.message : 'Không tải được, thử lại.');
+          return;
+        }
+        var ds = res.ds || [];
+        if (!ds.length) { showBox($('qtBox'), 'err', 'Chưa có dữ liệu để xuất.'); return; }
+        guiFileCSV(tenFile, CSV_BOM + dungLines(ds).join('\r\n'));
+        showBox($('qtBox'), 'ok', 'Đã xuất ' + ds.length + ' dòng — file ' + tenFile);
+      }, function (msg) {
+        qtBusy = false;
+        if (btn) { btn.disabled = false; btn.textContent = chuCu; }
+        showBox($('qtBox'), 'err', msg);
+      });
+    }
+
+    function qtCsvChiTra(btn) {
+      qtTaiCSV('chitraall', btn, function (ds) {
+        var lines = [];
+        lines.push(csvCell('SỔ CHI TRẢ — DOME saigon (xuất từ app Duyệt DOME)'));
+        lines.push('');
+        lines.push(['Ngày', 'Tên', 'Số tiền', 'Loại', 'Ghi chú', 'Trạng thái'].map(csvCell).join(','));
+        ds.forEach(function (x) {
+          lines.push([x.ngay, x.ten, x.soTien, x.loai, x.ghiChu, (x.huy ? 'Đã hủy' : '')].map(csvCell).join(','));
+        });
+        return lines;
+      }, 'so-chi-tra-DOME-' + ngayFile() + '.csv');
+    }
+
+    function qtCsvKyChot(btn) {
+      qtTaiCSV('kychotall', btn, function (ds) {
+        var lines = [];
+        lines.push(csvCell('KỲ ĐÃ CHỐT — DOME saigon (xuất từ app Duyệt DOME)'));
+        lines.push('');
+        lines.push(['Từ', 'Đến', 'Tên', 'Vị trí', 'Đơn giá/giờ', 'Tổng giờ', 'Thành tiền', 'Chốt lúc'].map(csvCell).join(','));
+        ds.forEach(function (k) {
+          lines.push([k.tu, k.den, k.ten, k.viTri, k.donGia, k.tongGio, k.thanhTien, k.chotLuc].map(csvCell).join(','));
+        });
+        return lines;
+      }, 'ky-da-chot-DOME-' + ngayFile() + '.csv');
+    }
+
+    // Sao lưu là lệnh GHI → goiApi KHÔNG tự thử lại (tránh tạo 2 bản backup).
+    function qtBackup(btn) {
+      if (!mk || qtBusy) return;
+      if (!window.confirm('Sao lưu toàn bộ Sheet chấm công ngay bây giờ?\nMáy tạo 1 bản copy vào folder sao lưu và chỉ giữ 8 bản mới nhất.')) return;
+      qtBusy = true;
+      var chuCu = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Đang sao lưu...';
+      hideBox($('qtBox'));
+      goiApi({ api: 'backup', mk: mk }, function (res) {
+        qtBusy = false;
+        btn.disabled = false; btn.textContent = chuCu;
+        if (!res || !res.ok) { showBox($('qtBox'), 'err', (res && res.message) ? res.message : 'Không sao lưu được, thử lại.'); return; }
+        showBox($('qtBox'), 'ok', '✅ Đã sao lưu: ' + (res.tenFile || '(không rõ tên file)') +
+          (res.tongBan == null ? '' : (' · đang giữ ' + res.tongBan + ' bản')));
+      }, function (msg) {
+        qtBusy = false;
+        btn.disabled = false; btn.textContent = chuCu;
+        showBox($('qtBox'), 'err', msg);
       });
     }
 
