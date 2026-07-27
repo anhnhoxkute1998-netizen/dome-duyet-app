@@ -123,6 +123,10 @@
       padding: 11px 13px; font-size: 15px;
     }
     .warntxt { color: var(--warn); font-weight: 600; }
+    .cb { margin-top: 6px; }
+    .cb summary { cursor: pointer; }
+    .cb .cbrow { padding: 7px 0 2px; margin-top: 5px; border-top: 1px dashed rgba(0,0,0,.15); font-size: 13.5px; }
+    .cb .cbly { color: var(--warn); font-size: 12.5px; }
     details.nv { border: 1px solid var(--border); border-radius: var(--radius); margin-top: 10px; padding: 0 12px; }
     details.nv summary {
       list-style: none; cursor: pointer; padding: 12px 0;
@@ -211,7 +215,6 @@
         <button type="button" class="btn btn-primary" id="btnOpen" onclick="doOpen()">Mở trang duyệt</button>
       </div>
       <div id="lockBox" class="box"></div>
-      <div class="hint">Mã do chủ quán đặt trong tab Cấu hình (khóa MK_DUYET). Không chia sẻ cho nhân viên.</div>
     </div>
 
     <!-- ===== TAB CHUYỂN MÀN (hiện sau khi mở khóa) ===== -->
@@ -268,7 +271,6 @@
       <div class="field" id="khuCSV" style="display:none">
         <button type="button" class="btn btn-ghost" onclick="xuatCSV()">⬇ Xuất file CSV (mở được bằng Excel)</button>
       </div>
-      <div class="hint">Chỉ để xem nhanh. Bảng lương chính thức (lưu hồ sơ) vẫn tạo bằng menu ⏱ Chấm công → Tính lương tháng... trong Sheet.</div>
     </div>
 
     <!-- ===== MÀN NHÂN VIÊN (v10.0): thêm/đổi vị trí/reset PIN/cho nghỉ + vị trí & đơn giá ===== -->
@@ -630,8 +632,33 @@
 
     function renderLuong(res) {
       $('luongKhoang').textContent = res.tuNgay + ' – ' + res.denNgay;
-      var html = '<div class="tong">Tổng cả quán: <b>' + vnd(res.tongTien) + ' đ</b> · ' + esc(res.tongGio) + ' giờ' +
-        (res.soCanhBao ? '<br><span class="warntxt">⚠ ' + esc(res.soCanhBao) + ' dòng cần kiểm tra (thiếu chấm/lệch ca)</span>' : '') + '</div>';
+      var canhBaoHtml = '';
+      if (res.soCanhBao) {
+        // sổ chi tiết từng dòng cần kiểm tra: ngày · ai · vị trí · ca — thiếu gì
+        var dsLoi = (res.chiTiet || []).filter(function (c) { return c.loi; });
+        var vtMap = {};
+        (res.tongHop || []).forEach(function (p) { vtMap[p.ten] = p.viTri || ''; });
+        var coNamCB = String(res.tuNgay).slice(-4) !== String(res.denNgay).slice(-4);
+        var rowsCB = dsLoi.map(function (c) {
+          var ngay = String(c.ngay).slice(8, 10) + '/' + String(c.ngay).slice(5, 7) + (coNamCB ? '/' + String(c.ngay).slice(2, 4) : '');
+          var lyDo;
+          if (!c.gioVao || !c.gioRa) {
+            // nói rõ thiếu cái nào — không dùng ghi chú chung của server (câu đó chỉ về Sheet)
+            lyDo = !c.gioVao
+              ? 'Thiếu Check-in — chỉ có giờ ra ' + (c.gioRa || '—')
+              : 'Thiếu Check-out — chỉ có giờ vào ' + (c.gioVao || '—') + ' (NV quên chấm ra, hoặc ca hôm nay chưa xong)';
+            lyDo += '. Xử lý: chờ NV gửi "Điều chỉnh giờ" rồi duyệt ở tab Duyệt.';
+          } else {
+            lyDo = c.ghiChu ? String(c.ghiChu).replace(/^⚠\s*/, '') : 'Kiểm tra lại giờ chấm';
+          }
+          return '<div class="cbrow"><b>' + esc(ngay) + ' · ' + esc(c.ten) + '</b>' +
+            (vtMap[c.ten] ? ' · ' + esc(vtMap[c.ten]) : '') + ' · ca ' + esc(c.ca || '—') +
+            '<br><span class="cbly">' + esc(lyDo) + '</span></div>';
+        }).join('');
+        canhBaoHtml = '<details class="cb"><summary><span class="warntxt">⚠ ' + esc(res.soCanhBao) +
+          ' dòng cần kiểm tra — bấm xem chi tiết</span></summary>' + rowsCB + '</details>';
+      }
+      var html = '<div class="tong">Tổng cả quán: <b>' + vnd(res.tongTien) + ' đ</b> · ' + esc(res.tongGio) + ' giờ' + canhBaoHtml + '</div>';
       var tongHop = res.tongHop || [];
       if (!tongHop.length) {
         html += '<div class="empty">Không có dữ liệu chấm công hợp lệ trong khoảng này.</div>';
