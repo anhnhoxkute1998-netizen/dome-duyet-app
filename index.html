@@ -174,6 +174,26 @@
     .nvx-vt .gia { white-space: nowrap; }
     .nvx-vt a { color: var(--primary); font-weight: 600; font-size: 13.5px; }
     .nvx-sec { margin-top: 22px; font-size: 17px; font-weight: 700; color: var(--primary); }
+    /* ===== v12: số dư chi trả trên thẻ NV + sổ chi + khu Chốt kỳ (class mới, không đụng style cũ) ===== */
+    .nvx-sd { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+    .nvx-sd b { color: #1f2430; font-weight: 700; }
+    .nvx-sd-cho { opacity: .7; }
+    .nvx-conlai { display: block; margin-top: 2px; font-size: 14px; font-weight: 800; color: var(--primary-dark); }
+    .nvx-conlai.am { color: var(--err); }
+    .nvx-conlai.khong { color: var(--muted); }
+    .nvx-so { margin-top: 12px; }
+    .nvx-so .r { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 13.5px; padding: 8px 0; border-top: 1px dashed var(--border); }
+    .nvx-so .r.huy { opacity: .5; text-decoration: line-through; }
+    .nvx-so .r .n { min-width: 98px; color: var(--muted); }
+    .nvx-so .r .l { font-weight: 600; }
+    .nvx-so .r .s { margin-left: auto; font-weight: 700; white-space: nowrap; }
+    .nvx-so .r .gc { width: 100%; font-size: 12.5px; color: var(--muted); }
+    /* nút Hủy nằm trong hàng — .btn mặc định width:100% và .nvx-act .btn có margin-top, phải bóp lại */
+    .nvx-so .r .btn { width: auto; min-height: 34px; padding: 0 12px; font-size: 13px; margin-top: 0; }
+    .ck-row { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 14px; padding: 9px 0; border-bottom: 1px dashed var(--border); }
+    .ck-row .ky2 { font-weight: 700; flex: 1; }
+    .ck-row .tien2 { white-space: nowrap; font-weight: 700; color: var(--primary-dark); }
+    .ck-row .luc2 { width: 100%; font-size: 12px; color: var(--muted); }
     /* ===== Màn hình chờ — che nhịp render đầu, ẩn ngay khi UI sẵn sàng ===== */
     .splash {
       position: fixed; inset: 0; background: var(--primary); z-index: 10;
@@ -270,6 +290,27 @@
       <div id="luongKQ"></div>
       <div class="field" id="khuCSV" style="display:none">
         <button type="button" class="btn btn-ghost" onclick="xuatCSV()">⬇ Xuất file CSV (mở được bằng Excel)</button>
+      </div>
+
+      <!-- ===== CHỐT KỲ (v12) — đóng băng số kỳ đã trả, mốc tính "còn phải trả" của từng NV ===== -->
+      <div class="nvx-sec">🔒 Chốt kỳ</div>
+      <div class="hint" style="margin-top:2px">Chốt xong, tiền kỳ đó được đóng băng — đổi đơn giá sau này không làm lệch kỳ cũ.</div>
+      <div id="ckBox" class="box"></div>
+      <div id="ckKetQua"></div>
+      <div id="ckKQ"></div>
+      <div class="field">
+        <button type="button" class="btn btn-ghost" onclick="ckMoForm()">🔒 Chốt kỳ...</button>
+      </div>
+      <div class="sua" id="ckForm" style="display:none">
+        <div class="range">
+          <div class="f"><label class="lbl" for="ckTu">Kỳ từ ngày</label><input type="date" id="ckTu"></div>
+          <div class="f"><label class="lbl" for="ckDen">Kỳ đến ngày</label><input type="date" id="ckDen"></div>
+        </div>
+        <div class="bu-warn">⚠ Chốt rồi KHÔNG hủy được trên app. Nên tính lương xem kỹ trước khi chốt.</div>
+        <div class="nvx-row">
+          <button type="button" class="btn btn-primary btn-sm" onclick="ckChot(this)">Chốt kỳ này</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="ckMoForm()">Đóng</button>
+        </div>
       </div>
     </div>
 
@@ -534,6 +575,8 @@
       if (t === 'luong' && !$('tuNgay').value) chonKy(0); // lần đầu mở: tự chọn kỳ này + tính luôn
       if (t === 'homnay') taiHomNay();                    // mỗi lần mở tab là lấy số liệu tươi
       if (t === 'nhanvien') taiNhanVien();                // mỗi lần mở tab là lấy danh sách tươi
+      if (t === 'luong') ckTai();                         // v12: danh sách kỳ đã chốt
+      if (t === 'nhanvien') sdTai();                      // v12: số dư chi trả — gọi SONG SONG nvlist, về sau thì vá vào thẻ
     }
 
     // ===== TAB HÔM NAY (chỉ xem) =====
@@ -784,6 +827,7 @@
               '<div class="nvx-ten">' + esc(n.ten) + '</div>' +
               '<div class="nvx-sub">' + esc(n.viTri || '—') + ' · ' + nvGia(n.donGia) + '</div>' +
               (n.sdt ? '<div class="nvx-sub">📞 ' + esc(n.sdt) + '</div>' : '') +
+              '<div class="nvx-sd" id="nvxsd-' + i + '">' + sdKhoi(n.ten) + '</div>' +
             '</div>' +
             '<span class="nvx-badge ' + (n.active ? 'lam' : 'nghi') + '">' + (n.active ? 'Đang làm' : 'Nghỉ') + '</span>' +
           '</div>' +
@@ -794,6 +838,27 @@
             '<button type="button" class="btn btn-ghost btn-sm" onclick="nvResetPin(' + i + ', this)">🔑 Reset PIN</button>' +
             '<button type="button" class="btn btn-ghost btn-sm" onclick="nvDoiActive(' + i + ', this)">' +
               (n.active ? 'Cho nghỉ' : 'Cho làm lại') + '</button>' +
+            // v12 — chi trả: ghi khoản ứng/trả lương + xem sổ chi của riêng NV này
+            '<div class="nvx-row">' +
+              '<button type="button" class="btn btn-ghost btn-sm" onclick="ctGhiMo(' + i + ')">💵 Ghi chi trả</button>' +
+              '<button type="button" class="btn btn-ghost btn-sm" onclick="ctSoMo(' + i + ')">📒 Sổ chi</button>' +
+            '</div>' +
+            '<div class="sua" id="nvxct-' + i + '" style="display:none">' +
+              '<label class="nvx-lbl" for="ctso-' + i + '">Số tiền (đ)</label>' +
+              '<input type="text" id="ctso-' + i + '" inputmode="numeric" autocomplete="off" placeholder="VD: 500.000" oninput="ctFormat(this)">' +
+              '<label class="nvx-lbl" for="ctloai-' + i + '" style="margin-top:12px">Loại khoản</label>' +
+              '<select class="nvx-sel" id="ctloai-' + i + '">' +
+                '<option value="Ứng">Ứng</option>' +
+                '<option value="Trả lương">Trả lương</option>' +
+              '</select>' +
+              '<label class="nvx-lbl" for="ctgc-' + i + '" style="margin-top:12px">Ghi chú <span style="font-weight:400;color:var(--muted)">— không bắt buộc</span></label>' +
+              '<input type="text" id="ctgc-' + i + '" autocomplete="off" placeholder="VD: chuyển khoản Momo">' +
+              '<div class="nvx-row">' +
+                '<button type="button" class="btn btn-primary btn-sm" onclick="ctGhi(' + i + ', this)">Ghi khoản này</button>' +
+                '<button type="button" class="btn btn-ghost btn-sm" onclick="ctGhiMo(' + i + ')">Đóng</button>' +
+              '</div>' +
+            '</div>' +
+            '<div class="nvx-so" id="nvxso-' + i + '" style="display:none"></div>' +
           '</div>' +
         '</div>';
       });
@@ -973,6 +1038,219 @@
       nvGoi({ api: 'vitrithem', mk: mk, viTri: ten, donGia: g }, btn, 'Đã thêm vị trí.', $('vtBox'), function () {
         $('vtThemTen').value = ''; $('vtThemGia').value = '';
         $('vtFormThem').style.display = 'none';
+      });
+    }
+
+    // ===== v12 — SỐ DƯ CHI TRẢ (api 'sodu') =====
+    // Gọi SONG SONG nvlist khi mở tab Nhân viên. Ai về trước không quan trọng:
+    // renderNhanVien đọc sdMap để dựng khối, sdVaThe() vá lại khối khi sodu về sau.
+    var sdBusy = false;
+    var sdMap = null;    // null = chưa có số liệu; {} = đã gọi nhưng không có/không lấy được
+
+    function sdTai() {
+      if (!mk || sdBusy) return;
+      sdBusy = true;
+      goiApi({ api: 'sodu', mk: mk }, function (res) {
+        sdBusy = false;
+        var m = {};
+        if (res && res.ok) {
+          (res.ds || []).forEach(function (s) {
+            m[s.ten] = {
+              tong: (Number(s.tongChot) || 0) + (Number(s.congDangChay) || 0),
+              daChi: Number(s.daChi) || 0,
+              conLai: Number(s.conLai) || 0
+            };
+          });
+        }
+        // server chưa có api 'sodu' → sdMap = {} → khối ẩn, tab Nhân viên vẫn chạy như cũ
+        sdMap = m;
+        sdVaThe();
+      }, function () {
+        sdBusy = false;
+        sdMap = {};
+        sdVaThe();
+      });
+    }
+
+    // HTML bên trong khối số dư của 1 NV ('' = không hiện gì)
+    function sdKhoi(ten) {
+      if (!sdMap) return '<span class="nvx-sd-cho">Đang tải số dư...</span>';
+      var s = sdMap[ten];
+      if (!s) return '';
+      var z = s.conLai, cls = 'nvx-conlai', txt;
+      if (z < 0) { cls += ' am'; txt = 'Ứng dư ' + vnd(-z) + ' đ'; }
+      else if (z === 0) { cls += ' khong'; txt = 'CÒN PHẢI TRẢ: 0 đ'; }
+      else { txt = 'CÒN PHẢI TRẢ: ' + vnd(z) + ' đ'; }
+      return 'Tổng công <b>' + vnd(s.tong) + ' đ</b> · Đã chi ' + vnd(s.daChi) + ' đ' +
+             '<span class="' + cls + '">' + txt + '</span>';
+    }
+
+    function sdVaThe() {
+      var ds = (nvData && nvData.nhanVien) || [];
+      ds.forEach(function (n, i) {
+        var el = $('nvxsd-' + i);
+        if (el) el.innerHTML = sdKhoi(n.ten);
+      });
+    }
+
+    // ===== v12 — GHI CHI TRẢ + SỔ CHI (api 'chitrathem' / 'chitralist' / 'chitrahuy') =====
+    var ctSoData = {};   // i (chỉ số thẻ NV) -> danh sách khoản của lần tải gần nhất
+
+    // Format nghìn khi gõ (cùng quy ước với vtSoTien: bỏ . , khoảng trắng khi đọc lại)
+    function ctFormat(el) {
+      var s = String(el.value).replace(/\D/g, '');
+      el.value = s ? Number(s).toLocaleString('vi-VN') : '';
+    }
+
+    function ctGhiMo(i) {
+      var el = $('nvxct-' + i);
+      if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+    }
+
+    function ctGhi(i, btn) {
+      if (nvBusy) return;
+      var n = nvItem(i), el = $('ctso-' + i), selL = $('ctloai-' + i), elG = $('ctgc-' + i);
+      if (!n || !el || !selL) return;
+      var so = vtSoTien(el);
+      if (so === null) { showBox($('nvBox'), 'err', 'Số tiền phải là số (chỉ chữ số), lớn hơn 0.'); return; }
+      var loai = selL.value;
+      var gc = elG ? String(elG.value).trim() : '';
+      if (gc.length > 200) { showBox($('nvBox'), 'err', 'Ghi chú tối đa 200 ký tự.'); return; }
+      if (!window.confirm('Ghi khoản "' + loai + '" cho ' + n.ten + ': ' + vnd(so) + ' đ?\nKhoản này trừ vào tiền còn phải trả của nhân viên.')) return;
+      nvGoi({ api: 'chitrathem', mk: mk, ten: n.ten, soTien: so, loai: loai, ghiChu: gc }, btn, 'Đã ghi khoản chi trả.', $('nvBox'), function () {
+        el.value = ''; if (elG) elG.value = '';
+        sdTai();   // số dư đổi → nạp lại (nvlist do nvGoi tự nạp lại)
+      });
+    }
+
+    function ctSoMo(i) {
+      var el = $('nvxso-' + i);
+      if (!el) return;
+      if (el.style.display === 'block') { el.style.display = 'none'; return; }
+      el.style.display = 'block';
+      ctSoTai(i);
+    }
+
+    function ctSoTai(i) {
+      var n = nvItem(i), el = $('nvxso-' + i);
+      if (!n || !el) return;
+      el.innerHTML = '<div class="hint">Đang tải sổ chi...</div>';
+      goiApi({ api: 'chitralist', mk: mk, ten: n.ten }, function (res) {
+        if (!res || !res.ok) {
+          el.innerHTML = '<div class="hint">' + esc((res && res.message) ? res.message : 'Không tải được sổ chi.') + '</div>';
+          return;
+        }
+        ctSoData[i] = res.ds || [];
+        ctSoRender(i);
+      }, function (msg) {
+        el.innerHTML = '<div class="hint">' + esc(msg) + '</div>';
+      });
+    }
+
+    function ctSoRender(i) {
+      var el = $('nvxso-' + i), ds = ctSoData[i] || [];
+      if (!el) return;
+      if (!ds.length) { el.innerHTML = '<div class="hint">Chưa có khoản chi trả nào.</div>'; return; }
+      el.innerHTML = ds.map(function (x, k) {
+        return '<div class="r' + (x.huy ? ' huy' : '') + '">' +
+          '<span class="n">' + esc(x.ngay) + '</span>' +
+          '<span class="l">' + esc(x.loai) + '</span>' +
+          '<span class="s">' + vnd(Number(x.soTien) || 0) + ' đ</span>' +
+          (x.huy ? '' : '<button type="button" class="btn btn-reject btn-sm" onclick="ctHuy(' + i + ', ' + k + ', this)">Hủy</button>') +
+          (x.ghiChu ? '<span class="gc">' + esc(x.ghiChu) + '</span>' : '') +
+          '</div>';
+      }).join('');
+    }
+
+    function ctHuy(i, k, btn) {
+      if (nvBusy) return;
+      var x = (ctSoData[i] || [])[k];
+      if (!x) return;
+      if (!window.confirm('Hủy khoản ' + x.loai + ' ' + vnd(Number(x.soTien) || 0) + ' đ ngày ' + x.ngay + '?\nKhoản hủy không tính vào sổ.')) return;
+      nvBusy = true;
+      var chuCu = btn.textContent;
+      btn.disabled = true; btn.textContent = '...';
+      hideBox($('nvBox'));
+      goiApi({ api: 'chitrahuy', mk: mk, row: x.row }, function (res) {
+        nvBusy = false;
+        btn.disabled = false; btn.textContent = chuCu;
+        if (!res || !res.ok) { showBox($('nvBox'), 'err', (res && res.message) ? res.message : 'Không hủy được, thử lại.'); return; }
+        showBox($('nvBox'), 'ok', res.message ? res.message : 'Đã hủy khoản chi.');
+        ctSoTai(i);   // nạp lại sổ tại chỗ (giữ nguyên thẻ đang mở)
+        sdTai();      // số dư đổi theo
+      }, function (msg) {
+        nvBusy = false;
+        btn.disabled = false; btn.textContent = chuCu;
+        showBox($('nvBox'), 'err', msg);
+      });
+    }
+
+    // ===== v12 — CHỐT KỲ (api 'kydachot' / 'chotky') =====
+    var ckBusy = false;
+
+    function ckTai() {
+      if (!mk || ckBusy) return;
+      ckBusy = true;
+      goiApi({ api: 'kydachot', mk: mk }, function (res) {
+        ckBusy = false;
+        // server chưa có api → coi như chưa chốt kỳ nào, không phá tab Tính lương
+        ckRender((res && res.ok) ? (res.dsKy || []) : []);
+      }, function () {
+        ckBusy = false;
+        ckRender([]);
+      });
+    }
+
+    function ckRender(dsKy) {
+      if (!dsKy.length) { $('ckKQ').innerHTML = '<div class="hint">Chưa chốt kỳ nào.</div>'; return; }
+      $('ckKQ').innerHTML = dsKy.map(function (k) {
+        return '<div class="ck-row">' +
+          '<span class="ky2">' + esc(k.tu) + ' – ' + esc(k.den) + '</span>' +
+          '<span class="tien2">' + vnd(Number(k.tongTien) || 0) + ' đ</span>' +
+          '<span class="luc2">' + esc(k.soNV) + ' NV · chốt lúc ' + esc(k.chotLuc) + '</span>' +
+          '</div>';
+      }).join('');
+    }
+
+    function ckMoForm() {
+      var el = $('ckForm');
+      if (!el) return;
+      var mo = (el.style.display === 'none');
+      el.style.display = mo ? 'block' : 'none';
+      // prefill KỲ TRƯỚC (kỳ vừa kết thúc) — không phải kỳ đang chạy
+      if (mo && !$('ckTu').value && !$('ckDen').value) {
+        var r = kyRange(-1);
+        $('ckTu').value = isoLocal(r[0]);
+        $('ckDen').value = isoLocal(r[1]);
+      }
+    }
+
+    function ckChot(btn) {
+      if (ckBusy) return;
+      var tu = $('ckTu').value, den = $('ckDen').value;
+      if (!tu || !den) { showBox($('ckBox'), 'err', 'Chọn đủ Kỳ từ ngày và Kỳ đến ngày.'); return; }
+      if (tu > den) { showBox($('ckBox'), 'err', 'Kỳ từ ngày phải trước hoặc bằng Kỳ đến ngày.'); return; }
+      if (!window.confirm('Chốt kỳ ' + tu + ' → ' + den + '?\nSố kỳ này sẽ đóng băng, đổi đơn giá sau không ảnh hưởng.\nKhông hủy được trên app.')) return;
+      ckBusy = true;
+      var chuCu = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Đang chốt...';
+      hideBox($('ckBox'));
+      goiApi({ api: 'chotky', mk: mk, tu: tu, den: den }, function (res) {
+        ckBusy = false;
+        btn.disabled = false; btn.textContent = chuCu;
+        if (!res || !res.ok) { showBox($('ckBox'), 'err', (res && res.message) ? res.message : 'Không chốt được, thử lại.'); return; }
+        showBox($('ckBox'), 'ok', res.message ? res.message : 'Đã chốt kỳ.');
+        $('ckKetQua').innerHTML = '<div class="tong">Đã chốt <b>' + esc(tu) + ' – ' + esc(den) + '</b>: ' +
+          esc(res.soNV) + ' nhân viên · <b>' + vnd(Number(res.tongTien) || 0) + ' đ</b>' +
+          (res.tongGio == null ? '' : (' · ' + esc(res.tongGio) + ' giờ')) +
+          (res.soCanhBao ? '<div class="warntxt">⚠ kỳ có ' + esc(res.soCanhBao) + ' dòng cần kiểm tra — đã chốt theo số hiện tại.</div>' : '') +
+          '</div>';
+        $('ckForm').style.display = 'none';
+        ckTai();
+      }, function (msg) {
+        ckBusy = false;
+        btn.disabled = false; btn.textContent = chuCu;
+        showBox($('ckBox'), 'err', msg);
       });
     }
 
