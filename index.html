@@ -496,18 +496,25 @@
       $('tqQuen').textContent = hn ? String((hn.quenCheckout || []).length) : '—';
       // đếm thẻ đang có trên màn — duyệt/từ chối xóa thẻ tại chỗ là dải khớp ngay
       $('tqTicket').textContent = phienCache.ticket ? String(document.querySelectorAll('#list .ticket').length) : '—';
-      $('tqTien').textContent = sd ? tienGon(sd.tongConLai) : '—';
+      var tongCL = null;
+      if (sd) {
+        tongCL = (typeof sd.tongConLai === 'number') ? sd.tongConLai
+          : (sd.ds || []).reduce(function (t, x) { return t + (Number(x.conLai) || 0); }, 0);
+      }
+      $('tqTien').textContent = (tongCL === null) ? '—' : tienGon(tongCL);
     }
 
     $('mk').addEventListener('keydown', function (e) { if (e.key === 'Enter') doOpen(); });
 
-    // ===== MỞ KHÓA (v13: 1 call 'bootstrap' — tickets + hôm nay + số dư trong cùng response) =====
+    // ===== MỞ KHÓA (v13.1: 'tickets' nhẹ; Tổng quan điền ngầm sau) =====
     function doOpen() {
       var val = $('mk').value.trim();
       if (!val) { showBox($('lockBox'), 'err', 'Vui lòng nhập mã duyệt.'); return; }
       $('btnOpen').disabled = true; $('btnOpen').textContent = 'Đang kiểm tra...';
       hideBox($('lockBox'));
-      goiApi({ api: 'bootstrap', mk: val }, function (res) {
+      // v13.1: login bằng 'tickets' NHẸ (2-4s) — 'bootstrap' gộp 3 lượt đọc bị chậm 30s+ lúc
+      // server nguội làm treo màn chờ. Dải Tổng quan điền NGẦM sau bằng 2 call song song.
+      goiApi({ api: 'tickets', mk: val }, function (res) {
         $('btnOpen').disabled = false; $('btnOpen').textContent = 'Mở trang duyệt';
         if (res && res.ok) {
           mk = val;
@@ -518,11 +525,15 @@
           $('tongquan').style.display = 'grid';
           $('board').style.display = 'block';
           renderList(res);
-          // đổ sẵn cache phiên để mở tab Hôm nay / Nhân viên là có số ngay
           phienCache.ticket = { data: res, luc: Date.now() };
-          if (res.homnay) phienCache.homnay = { data: res.homnay, luc: Date.now() };
-          if (res.soDu) phienCache.sodu = { data: res.soDu, luc: Date.now() };
           capNhatTongQuan();
+          // điền ngầm dải Tổng quan + cache phiên (không chặn login; lỗi thì ô hiện — chờ lượt sau)
+          goiApi({ api: 'homnay', mk: mk }, function (r2) {
+            if (r2 && r2.ok) { phienCache.homnay = { data: r2, luc: Date.now() }; capNhatTongQuan(); }
+          }, function () {});
+          goiApi({ api: 'sodu', mk: mk }, function (r3) {
+            if (r3 && r3.ok) { phienCache.sodu = { data: r3, luc: Date.now() }; capNhatTongQuan(); }
+          }, function () {});
         } else {
           showBox($('lockBox'), 'err', (res && res.message) ? res.message : 'Không mở được.');
         }
@@ -1267,7 +1278,7 @@
         // server chưa có api 'sodu' → sdMap = {} → khối ẩn, tab Nhân viên vẫn chạy như cũ
         var m = (res && res.ok) ? sdMapTu(res) : {};
         if (res && res.ok) {
-          phienCache.sodu = { data: { ds: res.ds || [], tongConLai: res.tongConLai }, luc: Date.now() };
+          phienCache.sodu = { data: { ds: res.ds || [] }, luc: Date.now() };
           capNhatTongQuan();
         }
         sdMap = m;
