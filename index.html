@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#4A6741">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon-192.png">
-  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- iOS mở từ màn hình chính dạng app -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -288,6 +288,8 @@
         <input type="text" id="nvThemTen" autocomplete="off" placeholder="VD: Nguyễn Văn A">
         <label class="nvx-lbl" for="nvThemPin" style="margin-top:12px">PIN 4 số <span style="font-weight:400;color:var(--muted)">— để trống thì máy tự sinh</span></label>
         <input type="text" id="nvThemPin" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="VD: 1234">
+        <label class="nvx-lbl" for="nvThemSdt" style="margin-top:12px">Số điện thoại <span style="font-weight:400;color:var(--muted)">— không bắt buộc</span></label>
+        <input type="tel" id="nvThemSdt" inputmode="numeric" autocomplete="off" maxlength="11" placeholder="VD: 0382969042">
         <label class="nvx-lbl" for="nvThemViTri" style="margin-top:12px">Vị trí</label>
         <div id="nvThemVT"></div>
         <div class="nvx-row">
@@ -754,6 +756,7 @@
             '<div>' +
               '<div class="nvx-ten">' + esc(n.ten) + '</div>' +
               '<div class="nvx-sub">' + esc(n.viTri || '—') + ' · ' + nvGia(n.donGia) + '</div>' +
+              (n.sdt ? '<div class="nvx-sub">📞 ' + esc(n.sdt) + '</div>' : '') +
             '</div>' +
             '<span class="nvx-badge ' + (n.active ? 'lam' : 'nghi') + '">' + (n.active ? 'Đang làm' : 'Nghỉ') + '</span>' +
           '</div>' +
@@ -881,15 +884,17 @@
       if (nvBusy) return;
       var ten = $('nvThemTen').value.trim();
       var pin = $('nvThemPin').value.trim();
+      var sdt = $('nvThemSdt').value.trim();
       var sel = $('nvThemViTri');
       var vt = sel ? sel.value : '';
       if (!ten) { showBox($('nvBox'), 'err', 'Nhập tên nhân viên.'); return; }
       if (pin && !/^\d{4}$/.test(pin)) { showBox($('nvBox'), 'err', 'PIN phải đúng 4 chữ số (hoặc để trống cho máy tự sinh).'); return; }
+      if (sdt && !/^\d{9,11}$/.test(sdt)) { showBox($('nvBox'), 'err', 'SĐT phải là 9-11 chữ số (hoặc để trống).'); return; }
       if (!vt) { showBox($('nvBox'), 'err', 'Chọn vị trí cho nhân viên.'); return; }
       if (!window.confirm('Thêm nhân viên "' + ten + '" — vị trí ' + vt + '?' + (pin ? '' : '\nPIN để trống → máy tự sinh 4 số.'))) return;
-      nvGoi({ api: 'nvthem', mk: mk, ten: ten, pin: pin, viTri: vt }, btn, 'Đã thêm nhân viên.', $('nvBox'), function (res) {
+      nvGoi({ api: 'nvthem', mk: mk, ten: ten, pin: pin, viTri: vt, sdt: sdt }, btn, 'Đã thêm nhân viên.', $('nvBox'), function (res) {
         hienPin(ten, res.pin);
-        $('nvThemTen').value = ''; $('nvThemPin').value = '';
+        $('nvThemTen').value = ''; $('nvThemPin').value = ''; $('nvThemSdt').value = '';
         $('nvFormThem').style.display = 'none';
       });
     }
