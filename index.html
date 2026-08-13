@@ -477,7 +477,15 @@
         var data = null;
         try { data = JSON.parse(txt); } catch (e) { data = null; }
         // Google trả trang lỗi HTML khi hệ thống bận / script lỗi → không parse được JSON
-        if (!data) { onErr('Hệ thống bận, thử lại.'); return; }
+        if (!data) {
+          // v15.1 — trang BẬN (không JSON) với API ĐỌC: thử lại đúng 1 lần sau 1.5s (server thường
+          // đã ấm lượt sau). API GHI không nằm trong API_DOC → KHÔNG retry, tránh ghi trùng tiền.
+          if (daThu !== true && laApiDoc(payload && payload.api)) {
+            setTimeout(function () { goiApi(payload, onOk, onErr, true); }, 1500);
+            return;
+          }
+          onErr('Hệ thống bận, thử lại.'); return;
+        }
         onOk(data);
       })['catch'](function () {
         clearTimeout(timer);
