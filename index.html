@@ -17,6 +17,35 @@
   <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800&family=Dancing+Script:wght@600;700&display=swap" rel="stylesheet">
+  <!-- v16 — ÁO MÙA: tự bật/tắt theo NGÀY, hết mùa tự về brand quán (không cần deploy lại).
+       Chạy sớm trong <head> để không nhấp nháy. Thêm mùa mới = thêm 1 dòng vào bảng MUA. -->
+  <script>
+    (function () {
+      // tu/den dạng 'MM-DD', tính trọn cả 2 đầu, theo lịch máy người dùng.
+      var MUA = [
+        { key: 'quoc-khanh', tu: '08-28', den: '09-04', chao: 'Chúc Mừng Quốc Khánh 2/9' }
+      ];
+      function timMua(d) {
+        var s = ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+        for (var i = 0; i < MUA.length; i++) {
+          var m = MUA[i];
+          // khoảng vắt qua năm mới (vd 12-24 → 01-02) so kiểu OR
+          var trong = (m.tu <= m.den) ? (s >= m.tu && s <= m.den) : (s >= m.tu || s <= m.den);
+          if (trong) return m;
+        }
+        return null;
+      }
+      try {
+        var m = timMua(new Date());
+        if (!m) return;                    // ngoài mùa → app y hệt bản thường
+        document.documentElement.setAttribute('data-mua', m.key);
+        document.addEventListener('DOMContentLoaded', function () {
+          var el = document.getElementById('muaChao');
+          if (el) el.textContent = m.chao;
+        });
+      } catch (e) { /* lỗi gì cũng không được chặn app */ }
+    })();
+  </script>
   <style>
     :root {
       --primary: #4A6741; --primary-dark: #3E5737; --cream: #F2D3BE;
@@ -231,6 +260,49 @@
       animation: quay .9s linear infinite;
     }
     @keyframes quay { to { transform: rotate(360deg); } }
+
+    /* ===== v16 — ÁO MÙA =====
+       Nguyên tắc: chỉ khoác lên lớp TRANG TRÍ. KHÔNG đụng --err/--ok/--warn — màu cảnh báo
+       phải giữ nguyên nghĩa, không thì chủ quán hết phân biệt được đâu là dòng cần xử lý.
+       Ngoài mùa: không có thuộc tính data-mua → mọi luật dưới đây tắt, app y hệt bản thường. */
+    .hero-star { font-size: 12px; vertical-align: super; }
+    #muaChao { display: none; }
+    [data-mua] #muaChao {
+      display: block; margin-top: 7px; font-size: 12.5px; font-weight: 600; letter-spacing: .3px;
+    }
+    /* Quốc khánh 2/9 — hero & splash khoác ẢNH NỀN lễ (nền xanh rêu thương hiệu + lụa đỏ,
+       sao vàng 3D, sen, bản đồ VN có Hoàng Sa – Trường Sa). Thân app giữ trắng nên màu cảnh
+       báo vẫn đọc đúng nghĩa. Chữ do app vẽ (không nằm trong ảnh) → sắc nét mọi màn hình. */
+    [data-mua="quoc-khanh"] .hero {
+      position: relative; overflow: hidden;
+      background: #4A6741 url("ao-mua-hero.jpg") center / cover no-repeat;
+    }
+    [data-mua="quoc-khanh"] .hero-star {
+      font-size: 15px; text-shadow: 0 0 10px rgba(255, 205, 0, .6);
+    }
+    /* Chất liệu VÀNG KIM LOẠI (mẫu A + gờ nổi 3D) — dùng chung cho dòng chào và dấu sao,
+       để đồng chất với ngôi sao 3D trong ảnh nền. */
+    [data-mua="quoc-khanh"] #muaChao,
+    [data-mua="quoc-khanh"] .hero-star {
+      color: #FFD84D;                       /* nền lùi: máy không hỗ trợ vẫn ra chữ vàng, không tàng hình */
+    }
+    @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+      [data-mua="quoc-khanh"] #muaChao,
+      [data-mua="quoc-khanh"] .hero-star {
+        background: linear-gradient(180deg, #FFF6C2 0%, #FFD84D 26%, #E8A81C 48%,
+                                            #FFE873 62%, #F5C518 82%, #C98A0C 100%);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+        text-shadow: none;   /* chữ đã trong suốt → bỏ bóng cũ kẻo lộ xuyên glyph */
+        filter: drop-shadow(0 1px 0 rgba(125, 79, 5, .85))
+                drop-shadow(0 2px 0 rgba(125, 79, 5, .5))
+                drop-shadow(0 4px 6px rgba(0, 0, 0, .42));
+      }
+    }
+    [data-mua="quoc-khanh"] #muaChao { font-size: 14px; font-weight: 800; letter-spacing: .2px; }
+    /* Splash dùng ảnh dọc cùng bộ, không nhảy màu lúc mở app */
+    [data-mua="quoc-khanh"] .splash {
+      background: #4A6741 url("ao-mua-splash.jpg") center / cover no-repeat;
+    }
   </style>
 </head>
 <body>
@@ -245,8 +317,9 @@
     <div id="lock" class="card">
       <div class="hero">
         <div class="hero-dome">DOME</div>
-        <div class="hero-saigon">saigon <span style="font-size:12px;vertical-align:super">★</span></div>
+        <div class="hero-saigon">saigon <span class="hero-star">★</span></div>
         <div class="hero-sub">Trang duyệt chấm công</div>
+        <div id="muaChao"></div>
       </div>
       <div class="field">
         <label class="lbl" for="mk">Mã duyệt <span style="color:var(--err)">*</span></label>
