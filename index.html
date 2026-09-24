@@ -169,6 +169,8 @@
     .nv .money { font-weight: 800; color: var(--primary-dark); text-align: right; }
     .nv .sub2 { font-size: 12.5px; color: var(--muted); }
     .nv .gio { font-size: 12.5px; color: var(--muted); text-align: right; }
+    .hnrow.hnloi .ten { color: var(--err); font-weight: 700; }
+    .hnghi { font-size: 12px; color: var(--err); line-height: 1.5; padding: 0 2px 8px; }
     .ctrow { display: flex; gap: 8px; font-size: 13.5px; padding: 7px 0; border-top: 1px dashed var(--border); }
     .ctrow .d { min-width: 44px; color: var(--muted); }
     .ctrow .c { flex: 1; }
@@ -1004,6 +1006,21 @@
         if (t.bu) {
           html += '<div class="bu">Đề nghị bù: <b>' + esc(t.bu.loai) + '</b> lúc <b>' + esc(t.bu.ngayGio) +
                   '</b><br>Ca: <b>' + esc(t.bu.ca) + '</b></div>';
+          // Ca ticket ghi lệch ca bạn ấy đã chấm hôm đó → duyệt thẳng là thành 2 ca lẻ, mất trọn ngày công.
+          // Chỉ cảnh báo, KHÔNG chặn: có khi hôm đó làm thật hai ca khác nhau.
+          if (t.lechCa) {
+            html += '<div class="bu-warn">⚠ Hôm đó ' + esc(t.ten) + ' chấm ca <b>' +
+                    esc((t.caDaCham || []).join(', ')) + '</b> — khác ca ticket này ghi. ' +
+                    'Nếu bạn ấy chọn nhầm ca thì bấm Từ chối rồi nhờ gửi lại cho đúng: ' +
+                    'duyệt thẳng sẽ thành hai ca lẻ và KHÔNG tính được giờ nào. ' +
+                    'Còn nếu hôm đó bạn ấy làm thật cả hai ca thì duyệt bình thường.</div>';
+          }
+          // Ca đúng nhưng giờ đứng ngược thứ tự → duyệt xong ca đó vẫn 0 giờ
+          if (t.buNguoc) {
+            html += '<div class="bu-warn">⚠ Giờ này đứng ngược thứ tự với lượt ' + esc(t.ten) +
+                    ' đã chấm trong cùng ca. Duyệt xong ca đó vẫn KHÔNG tính được giờ nào — ' +
+                    'nếu đây là lượt bấm nhầm cần huỷ thì bấm Từ chối cho gọn.</div>';
+          }
         } else {
           html += '<div class="bu-warn">⚠ Ticket không có thông tin bù (gửi từ form cũ). Không duyệt được ở đây — dùng menu "Duyệt điều chỉnh giờ..." trên máy tính.</div>';
         }
@@ -1222,9 +1239,13 @@
     }
 
     function hnRow(x, gio) {
-      return '<div class="hnrow"><span class="ten">' + esc(x.ten) + '</span>' +
+      // Ca máy đã thấy sai thì phải kêu lên ngay ở đây — đây là màn hình xem hằng ngày.
+      // Trước đây ca hỏng mà có đủ 2 mốc giờ bị xếp vào mục "Đã xong ca" nên không ai để ý.
+      return '<div class="hnrow' + (x.loi ? ' hnloi' : '') + '"><span class="ten">' + esc(x.ten) +
+             (x.loi ? ' ⚠' : '') + '</span>' +
              '<span class="ca2">' + esc(x.ca || '—') + '</span>' +
-             '<span class="gio2">' + gio + '</span></div>';
+             '<span class="gio2">' + gio + '</span></div>' +
+             (x.loi && x.ghiChu ? '<div class="hnghi">' + esc(String(x.ghiChu).replace(/^⚠\s*/, '')) + '</div>' : '');
     }
 
     function renderHomNay(res) {
@@ -1910,7 +1931,37 @@
       var tu = $('ckTu').value, den = $('ckDen').value;
       if (!tu || !den) { showBox($('ckBox'), 'err', 'Chọn đủ Kỳ từ ngày và Kỳ đến ngày.'); return; }
       if (tu > den) { showBox($('ckBox'), 'err', 'Kỳ từ ngày phải trước hoặc bằng Kỳ đến ngày.'); return; }
-      if (!window.confirm('Chốt kỳ ' + tu + ' → ' + den + '?\nSố kỳ này sẽ đóng băng, đổi đơn giá sau không ảnh hưởng.\nKhông hủy được trên app.')) return;
+      // Soi kỳ TRƯỚC khi chốt: chốt rồi không hoàn tác được trên app, mà kỳ còn dòng cảnh báo
+      // nghĩa là có thể đang trả THIẾU giờ cho ai đó. Hỏi cho rõ rồi mới cho chốt.
+      ckBusy = true;
+      var chuSoi = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Đang soi kỳ...';
+      goiApi({ api: 'tinhluong', mk: mk, tu: tu, den: den }, function (res) {
+        ckBusy = false; btn.disabled = false; btn.textContent = chuSoi;
+        var dsLoi = (res && res.ok) ? (res.chiTiet || []).filter(function (c) { return c.loi; }) : null;
+        if (ckHoiTruoc(tu, den, dsLoi)) ckChotThat(btn, tu, den);
+      }, function () {
+        ckBusy = false; btn.disabled = false; btn.textContent = chuSoi;
+        if (ckHoiTruoc(tu, den, null)) ckChotThat(btn, tu, den);   // soi không được thì nói thẳng, KHÔNG chặn
+      });
+    }
+
+    // dsLoi = null nghĩa là chưa soi được (lỗi mạng) — nói rõ chứ không tự ý chặn chủ quán.
+    function ckHoiTruoc(tu, den, dsLoi) {
+      var chung = 'Chốt kỳ ' + tu + ' → ' + den + '?\nSố kỳ này sẽ đóng băng, đổi đơn giá sau không ảnh hưởng.\nKhông hủy được trên app.';
+      if (dsLoi === null) {
+        return window.confirm('CHƯA soi được kỳ này (mạng lỗi) nên chưa biết còn dòng nào cần kiểm tra không.\n\n' + chung);
+      }
+      if (!dsLoi.length) return window.confirm(chung);
+      var ds = dsLoi.slice(0, 8).map(function (c) {
+        return '  · ' + c.ten + ' ' + c.ngay + ' ca ' + c.ca + ' → ' + c.soGio + 'h';
+      }).join('\n');
+      return window.confirm('⚠ Kỳ này còn ' + dsLoi.length + ' dòng cần kiểm tra — có thể đang trả THIẾU giờ cho ai đó:\n\n' +
+        ds + (dsLoi.length > 8 ? '\n  · ... và ' + (dsLoi.length - 8) + ' dòng nữa' : '') +
+        '\n\nNên mở tab Tính lương xử lý trước khi chốt.\n\n' + chung);
+    }
+
+    function ckChotThat(btn, tu, den) {
       ckBusy = true;
       var chuCu = btn.textContent;
       btn.disabled = true; btn.textContent = 'Đang chốt...';
